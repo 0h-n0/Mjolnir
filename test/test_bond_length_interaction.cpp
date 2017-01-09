@@ -38,8 +38,8 @@ BOOST_AUTO_TEST_CASE(BondLength_calc_force)
         mjolnir::make_unique<mjolnir::HarmonicPotential<traits>>(k, native);
     mjolnir::BondLengthInteraction<traits> inter;
 
-    particle_type p1 = mjolnir::make_particle(1., zero_vec(), zero_vec(), zero_vec());
-    particle_type p2 = mjolnir::make_particle(1., zero_vec(), zero_vec(), zero_vec());
+    particle_type p1(1., zero_vec(), zero_vec(), zero_vec());
+    particle_type p2(1., zero_vec(), zero_vec(), zero_vec());
 
     const real_type dr = 1e-3;
     real_type dist = 1e0;

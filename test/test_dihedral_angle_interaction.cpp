@@ -41,9 +41,9 @@ BOOST_AUTO_TEST_CASE(DihedralAngle_force)
     const coordinate_type pos2(0e0, 0e0, 1e0);
     const coordinate_type pos3(0e0, 0e0, 0e0);
 
-    particle_type p1 = mjolnir::make_particle(1., pos1, zero_vec(), zero_vec());
-    particle_type p2 = mjolnir::make_particle(1., pos2, zero_vec(), zero_vec());
-    particle_type p3 = mjolnir::make_particle(1., pos3, zero_vec(), zero_vec());
+    particle_type p1(1., pos1, zero_vec(), zero_vec());
+    particle_type p2(1., pos2, zero_vec(), zero_vec());
+    particle_type p3(1., pos3, zero_vec(), zero_vec());
 
     const real_type dtheta = M_PI / 1800.0;
     for(int i = -1800; i < 1800; ++i)
@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(DihedralAngle_force)
 
         const real_type theta = i * dtheta;
         const coordinate_type pos4(std::cos(theta), -std::sin(theta), 0e0);
-        particle_type p4 = mjolnir::make_particle(1., pos4, zero_vec(), zero_vec());
+        particle_type p4(1., pos4, zero_vec(), zero_vec());
 
         const real_type deriv = potential->derivative(theta);
         const real_type coef = std::abs(deriv);

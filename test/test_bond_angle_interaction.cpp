@@ -39,8 +39,8 @@ BOOST_AUTO_TEST_CASE(BondAngleInteraction_force)
 
     const coordinate_type pos1(1., 0., 0.);
     const coordinate_type pos2(0., 0., 0.);
-    particle_type p1 = mjolnir::make_particle(1., pos1, zero_vec(), zero_vec());
-    particle_type p2 = mjolnir::make_particle(1., pos2, zero_vec(), zero_vec());
+    particle_type p1(1., pos1, zero_vec(), zero_vec());
+    particle_type p2(1., pos2, zero_vec(), zero_vec());
 
     const std::size_t N = 1800;
     const real_type dtheta = M_PI / N;
@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(BondAngleInteraction_force)
 
         const real_type theta = i * dtheta;
         const coordinate_type pos3(std::cos(theta), std::sin(theta), 0e0);
-        particle_type p3 = mjolnir::make_particle(1., pos3, zero_vec(), zero_vec());
+        particle_type p3(1., pos3, zero_vec(), zero_vec());
 
         const real_type deriv = potential->derivative(theta);
         const real_type coef = std::abs(deriv);
