@@ -2,6 +2,10 @@
 #define MJOLNIR_PARTICLE
 #include <mjolnir/util/scalar_type_of.hpp>
 
+#ifdef MJOLNIR_PARALLEL_THREAD
+#include <mutex>
+#endif
+
 namespace mjolnir
 {
 
@@ -12,6 +16,11 @@ struct Particle
     coordT position;
     coordT velocity;
     coordT force;
+
+#ifdef MJOLNIR_PARALLEL_THREAD
+    std::mutex mtx;
+#endif
+
 };
 
 template<typename coordT>
