@@ -41,7 +41,10 @@ read_particles(const toml::Table& tab)
         const typename traitsT::coordinate_type
             acceleration(acc.at(0), acc.at(1), acc.at(2));
 
-        *get<1>(iter) = make_particle(mass, position, velocity, acceleration);
+        get<1>(iter)->mass     = mass;
+        get<1>(iter)->position = position;
+        get<1>(iter)->velocity = velocity;
+        get<1>(iter)->force    = acceleration * mass;
     }
     return pcon;
 }
