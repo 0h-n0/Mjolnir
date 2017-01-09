@@ -28,6 +28,14 @@ class LocalForceField
     typedef std::array<std::size_t, 2> pid2_type;
     typedef std::array<std::size_t, 3> pid3_type;
     typedef std::array<std::size_t, 4> pid4_type;
+
+  private:
+    struct bond_potential_type;
+    struct angle_potential_type;
+    struct dihd_potential_type;
+    typedef std::vector<bond_potential_type>  bond_container;
+    typedef std::vector<angle_potential_type> angle_container;
+    typedef std::vector<dihd_potential_type>  dihd_container;
   
   public:
 
@@ -46,6 +54,31 @@ class LocalForceField
 
     void      calc_force(particle_container_type& pcon);
     real_type calc_energy(const particle_container_type& pcon) const;
+
+
+
+    void calc_force(particle_container_type& pcon,
+                    typename bond_container::const_iterator iter,
+                    const typename bond_container::const_iterator end);
+    void calc_force(particle_container_type& pcon,
+                    typename angle_container::const_iterator iter,
+                    const typename angle_container::const_iterator end);
+    void calc_force(particle_container_type& pcon,
+                    typename dihd_container::const_iterator iter,
+                    const typename dihd_container::const_iterator end);
+
+    real_type
+    calc_energy(const particle_container_type& pcon,
+                typename bond_container::const_iterator iter,
+                const typename bond_container::const_iterator end) const;
+    real_type
+    calc_energy(const particle_container_type& pcon,
+                typename angle_container::const_iterator iter,
+                const typename angle_container::const_iterator end) const;
+    real_type
+    calc_energy(const particle_container_type& pcon,
+                typename dihd_container::const_iterator iter,
+                const typename dihd_container::const_iterator end) const;
 
   private:
 
@@ -103,9 +136,9 @@ class LocalForceField
         potential_ptr pot;
     };
 
-    std::vector<bond_potential_type>  bond_potentials;
-    std::vector<angle_potential_type> angle_potentials;
-    std::vector<dihd_potential_type>  dihd_potentials;
+    bond_container  bond_potentials;
+    angle_container angle_potentials;
+    dihd_container  dihd_potentials;
 };
 
 template<typename traitsT>
@@ -135,20 +168,9 @@ void LocalForceField<traitsT>::emplace_dihedral(
 template<typename traitsT>
 void LocalForceField<traitsT>::calc_force(particle_container_type& pcon)
 {
-    for(auto iter = bond_potentials.cbegin();
-            iter != bond_potentials.cend(); ++iter)
-        bond.calc_force(pcon.at(iter->i), pcon.at(iter->j), *(iter->pot));
-
-    for(auto iter = angle_potentials.cbegin();
-            iter != angle_potentials.cend(); ++iter)
-        angle.calc_force(pcon.at(iter->i), pcon.at(iter->j), pcon.at(iter->k),
-                         *(iter->pot));
-
-    for(auto iter = dihd_potentials.cbegin();
-            iter != dihd_potentials.cend(); ++iter)
-        dihd.calc_force(pcon.at(iter->i), pcon.at(iter->j), pcon.at(iter->k),
-                        pcon.at(iter->l), *(iter->pot));
-
+    calc_force(pcon, bond_potentials.cbegin(),  bond_potentials.cend());
+    calc_force(pcon, angle_potentials.cbegin(), angle_potentials.cend());
+    calc_force(pcon, dihd_potentials.cbegin(),  dihd_potentials.cend());
     return;
 }
 
@@ -156,21 +178,85 @@ template<typename traitsT>
 typename LocalForceField<traitsT>::real_type
 LocalForceField<traitsT>::calc_energy(const particle_container_type& pcon) const
 {
-    real_type energy = 0.0;
+    return calc_energy(pcon, bond_potentials.cbegin(),  bond_potentials.cend()) +
+           calc_energy(pcon, angle_potentials.cbegin(), angle_potentials.cend())+
+           calc_energy(pcon, dihd_potentials.cbegin(),  dihd_potentials.cend());
+}
 
-    for(auto iter = bond_potentials.cbegin();
-            iter != bond_potentials.cend(); ++iter)
+template<typename traitsT>
+inline void LocalForceField<traitsT>::calc_force(
+        particle_container_type& pcon,
+        typename bond_container::const_iterator iter,
+        const typename bond_container::const_iterator end)
+{
+    for(; iter != end; ++iter)
+        bond.calc_force(pcon.at(iter->i), pcon.at(iter->j), *(iter->pot));
+    return;
+}
+
+template<typename traitsT>
+inline void LocalForceField<traitsT>::calc_force(
+        particle_container_type& pcon,
+        typename angle_container::const_iterator iter,
+        const typename angle_container::const_iterator end)
+{
+    for(; iter != end; ++iter)
+        angle.calc_force(pcon.at(iter->i), pcon.at(iter->j), pcon.at(iter->k),
+                         *(iter->pot));
+    return;
+}
+
+template<typename traitsT>
+inline void LocalForceField<traitsT>::calc_force(
+        particle_container_type& pcon,
+        typename dihd_container::const_iterator iter,
+        const typename dihd_container::const_iterator end)
+{
+    for(; iter != end; ++iter)
+        dihd.calc_force(pcon.at(iter->i), pcon.at(iter->j), pcon.at(iter->k),
+                        pcon.at(iter->l), *(iter->pot));
+
+    return;
+}
+
+template<typename traitsT>
+inline typename LocalForceField<traitsT>::real_type
+LocalForceField<traitsT>::calc_energy(
+        const particle_container_type& pcon,
+        typename bond_container::const_iterator iter,
+        const typename bond_container::const_iterator end) const
+{
+    real_type energy = 0.;
+    for(; iter != end; ++iter)
         energy += bond.calc_energy(
                 pcon.at(iter->i), pcon.at(iter->j), *(iter->pot));
+    return energy;
+}
 
-    for(auto iter = angle_potentials.cbegin();
-            iter != angle_potentials.cend(); ++iter)
+template<typename traitsT>
+inline typename LocalForceField<traitsT>::real_type
+LocalForceField<traitsT>::calc_energy(
+        const particle_container_type& pcon,
+        typename angle_container::const_iterator iter,
+        const typename angle_container::const_iterator end) const
+{
+    real_type energy = 0.;
+    for(; iter != end; ++iter)
         energy += angle.calc_energy(
                 pcon.at(iter->i), pcon.at(iter->j), pcon.at(iter->k),
                 *(iter->pot));
+    return energy;
+}
 
-    for(auto iter = dihd_potentials.cbegin();
-            iter != dihd_potentials.cend(); ++iter)
+template<typename traitsT>
+inline typename LocalForceField<traitsT>::real_type
+LocalForceField<traitsT>::calc_energy(
+        const particle_container_type& pcon,
+        typename dihd_container::const_iterator iter,
+        const typename dihd_container::const_iterator end) const
+{
+    real_type energy = 0.;
+    for(; iter != end; ++iter)
         energy += dihd.calc_energy(
                 pcon.at(iter->i), pcon.at(iter->j), pcon.at(iter->k),
                 pcon.at(iter->l), *(iter->pot));
