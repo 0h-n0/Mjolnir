@@ -27,7 +27,7 @@ class BondLengthInteraction
     ~BondLengthInteraction() = default;
 
     void
-    calc_force(particle_type& p1, particle_type& p2, const potential_type& pot);
+    calc_force(particle_type& p1, particle_type& p2, const potential_type& pot) const;
 
     real_type
     calc_energy(const particle_type& p1, const particle_type& p2,
@@ -37,12 +37,18 @@ class BondLengthInteraction
 template<typename traitsT>
 inline void
 BondLengthInteraction<traitsT>::calc_force(particle_type& p1, particle_type& p2,
-        const potential_type& pot)
+        const potential_type& pot) const
 {
     const coordinate_type dpos = p2.position - p1.position;
     const real_type lensq = length_sq(dpos);
     const real_type f = -1 * pot.derivative(std::sqrt(lensq));
     const coordinate_type force = dpos * (fast_inv_sqrt(lensq) * f);
+
+#ifdef MJOLNIR_PARALLEL_THREAD
+    std::lock_guard<std::mutex> lock1(p1.mtx);
+    std::lock_guard<std::mutex> lock2(p2.mtx);
+#endif
+
     p1.force -= force;
     p2.force += force;
     return;
