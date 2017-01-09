@@ -18,19 +18,20 @@ struct Particle
     coordT force;
 
 #ifdef MJOLNIR_PARALLEL_THREAD
+    Particle() = default;
+    Particle(const scalar_type<coordT> m, const coordT& pos,
+             const coordT& vel, const coordT& f)
+        : mass(m), position(pos), velocity(vel), force(f), mtx()
+    {}
+    ~Particle() = default;
+    Particle(const Particle& p) = delete;
+    Particle(Particle&& p)      = default;
+    Particle& operator=(const Particle& p) = delete;
+    Particle& operator=(Particle&& p)      = default;
     std::mutex mtx;
 #endif
 
 };
-
-template<typename coordT>
-constexpr inline Particle<coordT>
-make_particle(const scalar_type<coordT> mass, const coordT& pos,
-              const coordT& vel, const coordT& f)
-{
-    return Particle<coordT>{mass, pos, vel, f};
-}
-
 
 } // mjolnir
 #endif /* MJOLNIR_PARTICLE */
