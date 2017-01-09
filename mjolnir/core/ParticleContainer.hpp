@@ -23,13 +23,14 @@ class ParticleContainer
     ParticleContainer(std::size_t number_of_particles)
         : particles_(number_of_particles)
     {}
-    ParticleContainer(const container_type& parts)
-        : particles_(parts)
-    {}
-    ParticleContainer(container_type&& parts)
-        : particles_(std::forward<container_type>(parts))
-    {}
     ~ParticleContainer() = default;
+
+#ifdef MJOLNIR_PARALLEL_THREAD
+    ParticleContainer(const ParticleContainer&) = delete;
+    ParticleContainer(ParticleContainer&&) = default;
+    ParticleContainer& operator=(const ParticleContainer&) = delete;
+    ParticleContainer& operator=(ParticleContainer&&) = default;
+#endif
 
     std::size_t size() const {return particles_.size();}
 
