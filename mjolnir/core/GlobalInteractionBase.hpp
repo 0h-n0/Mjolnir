@@ -21,15 +21,26 @@ class GlobalInteractionBase
   public:
     virtual ~GlobalInteractionBase() = default;
 
+    virtual void initialize(
+            const particle_container_type& pcon, const time_type dt) = 0;
+
     virtual void
-    calc_force(particle_container_type& pcon, potential_type& pot) = 0;
+    calc_force(particle_container_type& pcon, potential_type& pot) const = 0;
 
     virtual real_type
     calc_energy(const particle_container_type& pcon,
                 const potential_type& pot) const = 0;
 
-    virtual void initialize(
-            const particle_container_type& pcon, const time_type dt) = 0;
+#ifdef MJOLNIR_PARALLEL_THREAD
+    virtual void
+    calc_force(particle_container_type& pcon, const potential_type& pot,
+               const std::size_t num_threads) const = 0;
+
+    virtual real_type
+    calc_energy(const particle_container_type& pcon, const potential_type& pot,
+                const std::size_t num_threads) const = 0;
+#endif
+
 };
 
 } // mjolnir
