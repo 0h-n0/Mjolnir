@@ -37,8 +37,15 @@ class GlobalForceField
                 std::forward<potential_ptr>(pot));
     }
 
-    void      calc_force(ParticleContainer<traitsT>& pcon);
+    void      calc_force(ParticleContainer<traitsT>& pcon) const;
     real_type calc_energy(const ParticleContainer<traitsT>& pcon) const;
+
+#ifdef MJOLNIR_PARALLEL_THREAD
+    void      calc_force(ParticleContainer<traitsT>& pcon,
+                         const std::size_t num_threads) const;
+    real_type calc_energy(const ParticleContainer<traitsT>& pcon,
+                         const std::size_t num_threads) const;
+#endif
 
     void initialize(const ParticleContainer<traitsT>& pcon, const time_type dt);
 
@@ -74,7 +81,7 @@ void GlobalForceField<traitsT>::initialize(
 }
 
 template<typename traitsT>
-void GlobalForceField<traitsT>::calc_force(ParticleContainer<traitsT>& pcon)
+void GlobalForceField<traitsT>::calc_force(ParticleContainer<traitsT>& pcon) const
 {
     for(auto iter = potentials_.begin(); iter != potentials_.end(); ++iter)
         iter->interaction_->calc_force(pcon, *(iter->potential_));
@@ -93,6 +100,32 @@ GlobalForceField<traitsT>::calc_energy(
     }
     return energy;
 }
+
+
+#ifdef MJOLNIR_PARALLEL_THREAD
+template<typename traitsT>
+void GlobalForceField<traitsT>::calc_force(
+        ParticleContainer<traitsT>& pcon, const std::size_t num_threads) const
+{
+    for(auto iter = potentials_.begin(); iter != potentials_.end(); ++iter)
+        iter->interaction_->calc_force(pcon, *(iter->potential_), num_threads);
+    return;
+}
+
+template<typename traitsT>
+typename GlobalForceField<traitsT>::real_type
+GlobalForceField<traitsT>::calc_energy(
+        const ParticleContainer<traitsT>& pcon, const std::size_t num_threads) const
+{
+    real_type energy = 0.;
+    for(auto iter = potentials_.cbegin(); iter != potentials_.cend(); ++iter)
+        energy += iter->interaction_->calc_energy(
+                pcon, *(iter->potential_), num_threads);
+    return energy;
+}
+#endif
+
+
 
 } // mjolnir
 
