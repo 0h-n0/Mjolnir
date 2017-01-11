@@ -18,31 +18,31 @@ class Matrix
     constexpr static std::size_t number_of_element = Row * Col;
 
   public:
-    Matrix() : values_{{}}{}
+    Matrix() noexcept : values_{{}}{}
     ~Matrix() = default;
 
     template<typename ... T_args, class = typename std::enable_if<
         (sizeof...(T_args) == number_of_element) &&
         is_all<std::is_convertible, realT, T_args...>::value>::type>
-    Matrix(T_args ... args) : values_{{args...}}{}
+    Matrix(T_args ... args) : values_{{static_cast<realT>(args)...}}{}
 
     Matrix(const Matrix& mat) = default;
     Matrix& operator=(const Matrix& mat) = default;
 
-    Matrix& operator+=(const Matrix& mat);
-    Matrix& operator-=(const Matrix& mat);
-    Matrix& operator*=(const scalar_type& scl);
-    Matrix& operator/=(const scalar_type& scl);
+    Matrix& operator+=(const Matrix& mat) noexcept;
+    Matrix& operator-=(const Matrix& mat) noexcept;
+    Matrix& operator*=(const scalar_type& scl) noexcept;
+    Matrix& operator/=(const scalar_type& scl) noexcept;
 
     scalar_type  at(const std::size_t i, const std::size_t j) const;
     scalar_type& at(const std::size_t i, const std::size_t j);
-    scalar_type  operator()(const std::size_t i, const std::size_t j) const;
-    scalar_type& operator()(const std::size_t i, const std::size_t j);
+    scalar_type  operator()(const std::size_t i, const std::size_t j) const noexcept;
+    scalar_type& operator()(const std::size_t i, const std::size_t j) noexcept;
 
     scalar_type  at(const std::size_t i) const {return values_.at(i);}
     scalar_type& at(const std::size_t i)       {return values_.at(i);}
-    scalar_type  operator[](const std::size_t i) const {return values_[i];}
-    scalar_type& operator[](const std::size_t i)       {return values_[i];}
+    scalar_type  operator[](const std::size_t i) const noexcept {return values_[i];}
+    scalar_type& operator[](const std::size_t i)       noexcept {return values_[i];}
 
   private:
     std::array<real_type, number_of_element> values_;
@@ -50,7 +50,7 @@ class Matrix
 
 template<typename realT, std::size_t R, std::size_t C>
 Matrix<realT, R, C>&
-Matrix<realT, R, C>::operator+=(const Matrix<realT, R, C>& mat)
+Matrix<realT, R, C>::operator+=(const Matrix<realT, R, C>& mat) noexcept
 {
     for(std::size_t i=0; i<R; ++i)
         for(std::size_t j=0; j<C; ++j)
@@ -60,7 +60,7 @@ Matrix<realT, R, C>::operator+=(const Matrix<realT, R, C>& mat)
 
 template<typename realT, std::size_t R, std::size_t C>
 Matrix<realT, R, C>&
-Matrix<realT, R, C>::operator-=(const Matrix<realT, R, C>& mat)
+Matrix<realT, R, C>::operator-=(const Matrix<realT, R, C>& mat) noexcept
 {
     for(std::size_t i=0; i<R; ++i)
         for(std::size_t j=0; j<C; ++j)
@@ -70,7 +70,7 @@ Matrix<realT, R, C>::operator-=(const Matrix<realT, R, C>& mat)
 
 template<typename realT, std::size_t R, std::size_t C>
 Matrix<realT, R, C>&
-Matrix<realT, R, C>::operator*=(const scalar_type& s)
+Matrix<realT, R, C>::operator*=(const scalar_type& s) noexcept
 {
     for(std::size_t i=0; i<R; ++i)
         for(std::size_t j=0; j<C; ++j)
@@ -80,7 +80,7 @@ Matrix<realT, R, C>::operator*=(const scalar_type& s)
 
 template<typename realT, std::size_t R, std::size_t C>
 Matrix<realT, R, C>&
-Matrix<realT, R, C>::operator/=(const scalar_type& s)
+Matrix<realT, R, C>::operator/=(const scalar_type& s) noexcept
 {
     for(std::size_t i=0; i<R; ++i)
         for(std::size_t j=0; j<C; ++j)
@@ -90,7 +90,7 @@ Matrix<realT, R, C>::operator/=(const scalar_type& s)
 
 template<typename realT, std::size_t R, std::size_t C>
 Matrix<realT, R, C>
-operator+(const Matrix<realT, R, C>& lhs, const Matrix<realT, R, C>& rhs)
+operator+(const Matrix<realT, R, C>& lhs, const Matrix<realT, R, C>& rhs) noexcept
 {
     Matrix<realT, R, C> retval;
     for(std::size_t i=0; i<R; ++i)
@@ -101,7 +101,7 @@ operator+(const Matrix<realT, R, C>& lhs, const Matrix<realT, R, C>& rhs)
 
 template<typename realT, std::size_t R, std::size_t C>
 Matrix<realT, R, C>
-operator-(const Matrix<realT, R, C>& lhs, const Matrix<realT, R, C>& rhs)
+operator-(const Matrix<realT, R, C>& lhs, const Matrix<realT, R, C>& rhs) noexcept
 {
     Matrix<realT, R, C> retval;
     for(std::size_t i=0; i<R; ++i)
@@ -112,7 +112,7 @@ operator-(const Matrix<realT, R, C>& lhs, const Matrix<realT, R, C>& rhs)
 
 template<typename realT, std::size_t R, std::size_t C>
 Matrix<realT, R, C>
-operator*(const Matrix<realT, R, C>& lhs, const realT rhs)
+operator*(const Matrix<realT, R, C>& lhs, const realT rhs) noexcept
 {
     Matrix<realT, R, C> retval;
     for(std::size_t i=0; i<R; ++i)
@@ -123,7 +123,7 @@ operator*(const Matrix<realT, R, C>& lhs, const realT rhs)
 
 template<typename realT, std::size_t R, std::size_t C>
 Matrix<realT, R, C>
-operator*(const realT lhs, const Matrix<realT, R, C>& rhs)
+operator*(const realT lhs, const Matrix<realT, R, C>& rhs) noexcept
 {
     Matrix<realT, R, C> retval;
     for(std::size_t i=0; i<R; ++i)
@@ -134,7 +134,7 @@ operator*(const realT lhs, const Matrix<realT, R, C>& rhs)
 
 template<typename realT, std::size_t R, std::size_t C>
 Matrix<realT, R, C>
-operator/(const Matrix<realT, R, C>& lhs, const realT rhs)
+operator/(const Matrix<realT, R, C>& lhs, const realT rhs) noexcept
 {
     Matrix<realT, R, C> retval;
     for(std::size_t i=0; i<R; ++i)
@@ -145,7 +145,7 @@ operator/(const Matrix<realT, R, C>& lhs, const realT rhs)
 
 template<typename realT, std::size_t L, std::size_t M, std::size_t N>
 Matrix<realT, L, N>
-operator*(const Matrix<realT, L, M>& lhs, const Matrix<realT, M, N>& rhs)
+operator*(const Matrix<realT, L, M>& lhs, const Matrix<realT, M, N>& rhs) noexcept
 {
     Matrix<realT, L, N> retval;
     for(std::size_t i=0; i < L; ++i)
@@ -171,14 +171,14 @@ Matrix<realT, R, C>::at(const std::size_t i, const std::size_t j)
 
 template<typename realT, std::size_t R, std::size_t C>
 typename Matrix<realT, R, C>::scalar_type
-Matrix<realT, R, C>::operator()(const std::size_t i, const std::size_t j) const
+Matrix<realT, R, C>::operator()(const std::size_t i, const std::size_t j) const noexcept
 {
     return this->values_[i * C + j];
 }
 
 template<typename realT, std::size_t R, std::size_t C>
 typename Matrix<realT, R, C>::scalar_type&
-Matrix<realT, R, C>::operator()(const std::size_t i, const std::size_t j)
+Matrix<realT, R, C>::operator()(const std::size_t i, const std::size_t j) noexcept
 {
     return this->values_[i * C + j];
 }

@@ -14,14 +14,14 @@ using Vector = Matrix<realT, N, 1>;
 // for vector 3d
 template<typename coordT>
 inline typename scalar_type_of<coordT>::type
-dot_product(const coordT& lhs, const coordT& rhs)
+dot_product(const coordT& lhs, const coordT& rhs) noexcept
 {
     return lhs[0] * rhs[0] + lhs[1] * rhs[1] + lhs[2] * rhs[2];
 }
 
 template<typename coordT>
 inline coordT
-cross_product(const coordT& lhs, const coordT& rhs)
+cross_product(const coordT& lhs, const coordT& rhs) noexcept
 {
     return coordT(lhs[1] * rhs[2] - lhs[2] * rhs[1],
                   lhs[2] * rhs[0] - lhs[0] * rhs[2],
@@ -30,7 +30,7 @@ cross_product(const coordT& lhs, const coordT& rhs)
 
 template<typename coordT>
 inline typename scalar_type_of<coordT>::type
-scalar_triple_product(const coordT& lhs, const coordT& mid, const coordT& rhs)
+scalar_triple_product(const coordT& lhs, const coordT& mid, const coordT& rhs) noexcept
 {
     return (lhs[1] * mid[2] - lhs[2] * mid[1]) * rhs[0] + 
            (lhs[2] * mid[0] - lhs[0] * mid[2]) * rhs[1] + 
@@ -39,7 +39,7 @@ scalar_triple_product(const coordT& lhs, const coordT& mid, const coordT& rhs)
 
 template<typename coordT>
 inline typename scalar_type_of<coordT>::type
-length_sq(const coordT& lhs)
+length_sq(const coordT& lhs) noexcept
 {
     return lhs[0] * lhs[0] + lhs[1] * lhs[1] + lhs[2] * lhs[2];
 }
