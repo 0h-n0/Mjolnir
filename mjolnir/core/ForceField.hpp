@@ -31,14 +31,22 @@ class ForceField
     ForceField& operator=(ForceField&&)      = default;
 
     void initialize(const ParticleContainer<traitsT>& pcon, const time_type dt);
-    void        calc_force(ParticleContainer<traitsT>& pcon);
+    void        calc_force(ParticleContainer<traitsT>& pcon) const;
     energy_type calc_energy(const ParticleContainer<traitsT>& pcon) const;
+
+#ifdef MJOLNIR_PARALLEL_THREAD
+    void        calc_force(ParticleContainer<traitsT>& pcon,
+                           const std::size_t num_threads) const;
+    energy_type calc_energy(const ParticleContainer<traitsT>& pcon,
+                           const std::size_t num_threads) const;
+#endif
 
   private:
 
     LocalForceField<traits_type>  local_;
     GlobalForceField<traits_type> global_;
 };
+
 template<typename traitsT>
 inline void ForceField<traitsT>::initialize(
         const ParticleContainer<traitsT>& pcon, const time_type dt)
@@ -48,7 +56,7 @@ inline void ForceField<traitsT>::initialize(
 }
 
 template<typename traitsT>
-inline void ForceField<traitsT>::calc_force(ParticleContainer<traitsT>& pcon)
+inline void ForceField<traitsT>::calc_force(ParticleContainer<traitsT>& pcon) const
 {
     this->local_.calc_force(pcon);
     this->global_.calc_force(pcon);
@@ -61,6 +69,26 @@ ForceField<traitsT>::calc_energy(const ParticleContainer<traitsT>& pcon) const
 {
     return this->local_.calc_energy(pcon) + this->global_.calc_energy(pcon);
 }
+
+#ifdef MJOLNIR_PARALLEL_THREAD
+template<typename traitsT>
+inline void ForceField<traitsT>::calc_force(
+        ParticleContainer<traitsT>& pcon, const std::size_t num_threads) const
+{
+    this->local_.calc_force(pcon, num_threads);
+    this->global_.calc_force(pcon, num_threads);
+    return;
+}
+
+template<typename traitsT>
+inline typename ForceField<traitsT>::energy_type
+ForceField<traitsT>::calc_energy(const ParticleContainer<traitsT>& pcon,
+            const std::size_t num_threads) const
+{
+    return this->local_.calc_energy(pcon, num_threads) +
+           this->global_.calc_energy(pcon, num_threads);
+}
+#endif
 
 } // mjolnir
 #endif /* MJOLNIR_FORCE_FIELD */
