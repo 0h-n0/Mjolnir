@@ -46,7 +46,7 @@ BondLengthInteraction<traitsT>::calc_force(particle_type& p1, particle_type& p2,
 
 #ifdef MJOLNIR_PARALLEL_THREAD
     std::lock_guard<spinlock> lock1(p1.spin);
-    std::lock_guard<spinlock> lock1(p2.spin);
+    std::lock_guard<spinlock> lock2(p2.spin);
 #endif
 
     p1.force -= force;
