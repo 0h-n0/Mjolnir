@@ -23,6 +23,11 @@ class Simulator
 
     void initialize();
     void step();
+
+#ifdef MJOLNIR_PARALLEL_THREAD
+    void step_core(const std::size_t num_threads);
+#endif
+
     void step_until(const time_type t);
     real_type calc_energy() const;
 
@@ -56,6 +61,15 @@ inline void Simulator<traitsT>::step()
     this->time_ = integrator_->step(this->time_, pcon_, ff_);
     return;
 }
+
+#ifdef MJOLNIR_PARALLEL_THREAD
+template<typename traitsT>
+inline void Simulator<traitsT>::step_core(const std::size_t num_threads)
+{
+    this->time_ = integrator_->step(this->time_, pcon_, ff_, num_threads);
+    return;
+}
+#endif
 
 template<typename traitsT>
 inline void Simulator<traitsT>::step_until(const time_type t)
