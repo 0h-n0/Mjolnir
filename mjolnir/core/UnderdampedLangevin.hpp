@@ -6,6 +6,10 @@
 #include <mjolnir/util/make_zip.hpp>
 #include <memory>
 
+#ifdef MJOLNIR_PARALLEL_THREAD
+#include <future>
+#endif
+
 namespace mjolnir
 {
 
@@ -34,13 +38,30 @@ class UnderdampedLangevin : public Integrator<traitsT>
     void initialize(const ParticleContainer<traitsT>& pcon) override;
 
     time_type step(const time_type time, ParticleContainer<traitsT>& pcon,
-                   ForceField<traitsT>& ff) override;
+                   const ForceField<traitsT>& ff) override;
+
+#ifdef MJOLNIR_PARALLEL_THREAD
+    time_type step(const time_type time, ParticleContainer<traitsT>& pcon,
+       const ForceField<traitsT>& ff, const std::size_t num_threads) override;
+#endif // MJOLNIR_PARALLEL_THREAD
 
     real_type  T() const {return temperature_;}
     real_type& T()       {return temperature_;}
 
     time_type  delta_t() const override {return dt_;}
     time_type& delta_t()       override {return dt_;}
+
+    void generate_noise(const ParticleContainer<traitsT>& pcon);
+
+#ifdef MJOLNIR_PARALLEL_THREAD
+  private:
+
+    void step_pos_and_half_vel(ParticleContainer<traitsT>& pcon,
+        const ForceField<traitsT>& ff, std::size_t i, const std::size_t end);
+    void step_acc_and_half_vel(ParticleContainer<traitsT>& pcon,
+        const ForceField<traitsT>& ff, std::size_t i, const std::size_t end);
+
+#endif // MJOLNIR_PARALLEL_THREAD
 
   private:
     time_type dt_;      //!< dt
@@ -70,7 +91,6 @@ void UnderdampedLangevin<traitsT>::initialize(
         *get<2>(iter) = rng_->underdamped_langevin(
                 get<0>(iter)->mass, *get<1>(iter), dt_, temperature_, kB_);
     }
-
     return;
 }
 
@@ -78,7 +98,7 @@ void UnderdampedLangevin<traitsT>::initialize(
 template<typename traitsT>
 typename UnderdampedLangevin<traitsT>::time_type
 UnderdampedLangevin<traitsT>::step(const time_type time,
-        ParticleContainer<traitsT>& pcon, ForceField<traitsT>& ff)
+        ParticleContainer<traitsT>& pcon, const ForceField<traitsT>& ff)
 {
     // calc r(t+dt)
     for(auto iter = make_zip(pcon.begin(),    gamma_.cbegin(),
@@ -123,6 +143,110 @@ UnderdampedLangevin<traitsT>::step(const time_type time,
 
     return time + dt_;
 }
+
+template<typename traitsT>
+void UnderdampedLangevin<traitsT>::generate_noise(
+        const ParticleContainer<traitsT>& pcon)
+{
+    for(auto iter = make_zip(pcon.cbegin(), gamma_.cbegin(), noise_.begin());
+            iter != make_zip(pcon.cend(),   gamma_.cend(),   noise_.end());
+            ++iter)
+    {
+        *get<2>(iter) = rng_->underdamped_langevin(
+                get<0>(iter)->mass, *get<1>(iter), dt_, temperature_, kB_);
+    }
+    return;
+}
+
+#ifdef MJOLNIR_PARALLEL_THREAD
+template<typename traitsT>
+typename UnderdampedLangevin<traitsT>::time_type
+UnderdampedLangevin<traitsT>::step(
+        const time_type time, ParticleContainer<traitsT>& pcon,
+        const ForceField<traitsT>& ff, const std::size_t num_threads)
+{
+    std::vector<std::future<void>> futures(num_threads-1);
+
+    // calc r(t+dt)
+    const std::size_t num_particle = pcon.size();
+    const std::size_t particle_per_thread = num_particle / num_threads + 1;
+    std::size_t begin = 0;
+    std::size_t end = particle_per_thread;
+    for(std::size_t t=0; t < num_threads-1; ++t)
+    {
+        futures[t] = std::async(std::launch::async,
+                [this, &pcon, &ff, begin, end](){
+                    step_pos_and_half_vel(pcon, ff, begin, end);
+                });
+
+        begin += particle_per_thread;
+        end   += particle_per_thread;
+    }
+    step_pos_and_half_vel(pcon, ff, begin, num_particle);
+    for(auto iter = futures.begin(); iter != futures.end(); ++iter)
+        iter->get(); // synchronize
+
+    // calc f(t+dt)
+    ff.calc_force(pcon, num_threads);
+    this->generate_noise(pcon);
+
+    // calc a(t+dt) and v(t+dt)
+    begin = 0;
+    end = particle_per_thread;
+    for(std::size_t t=0; t < num_threads-1; ++t)
+    {
+        futures[t] = std::async(std::launch::async,
+                [this, &pcon, &ff, begin, end](){
+                    step_acc_and_half_vel(pcon, ff, begin, end);
+                });
+
+        begin += particle_per_thread;
+        end   += particle_per_thread;
+    }
+    step_acc_and_half_vel(pcon, ff, begin, num_particle);
+    for(auto iter = futures.begin(); iter != futures.end(); ++iter)
+        iter->get(); // synchronize
+
+    return time + dt_;
+}
+
+template<typename traitsT>
+void UnderdampedLangevin<traitsT>::step_pos_and_half_vel(
+        ParticleContainer<traitsT>& pcon, const ForceField<traitsT>& ff,
+        std::size_t i, const std::size_t end)
+{
+    for(; i != end; ++i)
+    {
+        const real_type hgdt   = gamma_[i] * halfdt_;
+        const real_type o_hgdt = 1. - hgdt;
+        const coordinate_type noisy_force = noise_[i] + acceleration_[i];
+
+        pcon[i].position +=
+            (dt_ * o_hgdt) * (pcon[i].velocity) + halfdt2_ * noisy_force;
+
+        pcon[i].velocity *= o_hgdt * (o_hgdt * o_hgdt + hgdt);
+        pcon[i].velocity += (halfdt_ * o_hgdt) * noisy_force;
+    }
+    return;
+}
+
+template<typename traitsT>
+void UnderdampedLangevin<traitsT>::step_acc_and_half_vel(
+        ParticleContainer<traitsT>& pcon, const ForceField<traitsT>& ff,
+        std::size_t i, const std::size_t end)
+{
+    for(; i != end; ++i)
+    {
+        const coordinate_type acc = pcon[i].force / pcon[i].mass;
+        acceleration_[i] = acc;
+
+        pcon[i].velocity += halfdt_ * (1. - gamma_[i] * halfdt_) * (acc + noise_[i]);
+        pcon[i].force = coordinate_type(0., 0., 0.);
+    }
+    return;
+}
+
+#endif // MJOLNIR_PARALLEL_THREAD
 
 } // mjolnir
 #endif /* MJOLNIR_UNDERDAMPED_LANGEVIN_INTEGRATOR */

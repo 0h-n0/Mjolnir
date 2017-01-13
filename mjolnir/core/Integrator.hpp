@@ -20,7 +20,13 @@ class Integrator
 
     virtual time_type
     step(const time_type time, ParticleContainer<traitsT>& pcon,
-         ForceField<traitsT>& ff) = 0;
+         const ForceField<traitsT>& ff) = 0;
+
+#ifdef MJOLNIR_PARALLEL_THREAD
+    virtual time_type
+    step(const time_type time, ParticleContainer<traitsT>& pcon,
+         const ForceField<traitsT>& ff, const std::size_t num_threads) = 0;
+#endif //MJOLNIR_PARALLEL_THREAD
 
     virtual time_type& delta_t()       = 0;
     virtual time_type  delta_t() const = 0;
