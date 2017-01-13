@@ -71,14 +71,15 @@ BondAngleInteraction<traitsT>::calc_force(
         (coef_inv_sin * inv_len_r_kj) * (cos_theta * r_kj_reg - r_ij_reg);
 
 #ifdef MJOLNIR_PARALLEL_THREAD
-    std::lock_guard<std::mutex> lock1(p1.mtx);
-    std::lock_guard<std::mutex> lock2(p2.mtx);
-    std::lock_guard<std::mutex> lock3(p3.mtx);
+    std::lock_guard<spinlock> lock1(p1.spin);
+    std::lock_guard<spinlock> lock2(p2.spin);
+    std::lock_guard<spinlock> lock3(p3.spin);
 #endif
 
     p1.force += Fi;
     p2.force -= (Fi + Fk);
     p3.force += Fk;
+
     return;
 }
 

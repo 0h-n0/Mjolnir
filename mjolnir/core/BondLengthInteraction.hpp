@@ -45,12 +45,13 @@ BondLengthInteraction<traitsT>::calc_force(particle_type& p1, particle_type& p2,
     const coordinate_type force = dpos * (fast_inv_sqrt(lensq) * f);
 
 #ifdef MJOLNIR_PARALLEL_THREAD
-    std::lock_guard<std::mutex> lock1(p1.mtx);
-    std::lock_guard<std::mutex> lock2(p2.mtx);
+    std::lock_guard<spinlock> lock1(p1.spin);
+    std::lock_guard<spinlock> lock1(p2.spin);
 #endif
 
     p1.force -= force;
     p2.force += force;
+
     return;
 }
 

@@ -190,8 +190,8 @@ inline void GlobalDistanceInteraction<traitsT>::calc_force_(
             const coordinate_type f   = rij * (pot.derivative(i, j, l) / l);
 
 #ifdef MJOLNIR_PARALLEL_THREAD
-    std::lock_guard<std::mutex> lock1(pcon[i].mtx);
-    std::lock_guard<std::mutex> lock2(pcon[j].mtx);
+    std::lock_guard<spinlock> lock1(pcon[i].spin);
+    std::lock_guard<spinlock> lock2(pcon[j].spin);
 #endif
             pcon[i].force += f;
             pcon[j].force -= f;

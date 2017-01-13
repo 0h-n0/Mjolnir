@@ -4,6 +4,7 @@
 
 #ifdef MJOLNIR_PARALLEL_THREAD
 #include <mutex>
+#include <mjolnir/util/spin_lock.hpp>
 #endif
 
 namespace mjolnir
@@ -21,14 +22,15 @@ struct Particle
     Particle() = default;
     Particle(const scalar_type<coordT> m, const coordT& pos,
              const coordT& vel, const coordT& f)
-        : mass(m), position(pos), velocity(vel), force(f), mtx()
+        : mass(m), position(pos), velocity(vel), force(f)
     {}
     ~Particle() = default;
     Particle(const Particle& p) = delete;
-    Particle(Particle&& p)      = default;
+    Particle(Particle&& p)      = delete;
     Particle& operator=(const Particle& p) = delete;
-    Particle& operator=(Particle&& p)      = default;
-    std::mutex mtx;
+    Particle& operator=(Particle&& p)      = delete;
+
+    spinlock spin;
 #endif
 
 };
