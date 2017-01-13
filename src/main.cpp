@@ -35,6 +35,11 @@ int main(int argc, char** argv)
     const std::string ene_name = filename + ".ene";
     mjolnir::Observer<traits> obs(trajname, ene_name);
 
+#ifdef MJOLNIR_PARALLEL_THREAD
+    const std::size_t num_threads = toml::get<toml::Integer>(sim.at("threads"));
+#endif
+
+
 //     auto forcefield = toml::get<toml::Table>(input.at("forcefield"));
     mjolnir::ForceField<traits> ff = mjolnir::read_force_field<traits>(input);
 
@@ -51,7 +56,11 @@ int main(int argc, char** argv)
             obs.output_coordinate(simulator);
             obs.output_energy(simulator);
         }
+#ifdef MJOLNIR_PARALLEL_THREAD
+        simulator.step_core(num_threads);
+#else
         simulator.step();
+#endif
     }
 
     // output last state

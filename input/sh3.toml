@@ -8,6 +8,7 @@ temperature        = 300.0
 kB                 = 1.986231313e-3
 seed               = 2374
 number_of_particle = 56
+threads            = 4
 friction_constant  = [
     8.342399367026011e-3,
     5.731077592064138e-3,
