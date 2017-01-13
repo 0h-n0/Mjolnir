@@ -57,9 +57,9 @@ class UnderdampedLangevin : public Integrator<traitsT>
   private:
 
     void step_pos_and_half_vel(ParticleContainer<traitsT>& pcon,
-        const ForceField<traitsT>& ff, std::size_t i, const std::size_t end);
+        std::size_t i, const std::size_t end);
     void step_acc_and_half_vel(ParticleContainer<traitsT>& pcon,
-        const ForceField<traitsT>& ff, std::size_t i, const std::size_t end);
+        std::size_t i, const std::size_t end);
 
 #endif // MJOLNIR_PARALLEL_THREAD
 
@@ -175,14 +175,12 @@ UnderdampedLangevin<traitsT>::step(
     for(std::size_t t=0; t < num_threads-1; ++t)
     {
         futures[t] = std::async(std::launch::async,
-                [this, &pcon, &ff, begin, end](){
-                    step_pos_and_half_vel(pcon, ff, begin, end);
-                });
+            [this, &pcon, begin, end](){step_pos_and_half_vel(pcon, begin, end);});
 
         begin += particle_per_thread;
         end   += particle_per_thread;
     }
-    step_pos_and_half_vel(pcon, ff, begin, num_particle);
+    step_pos_and_half_vel(pcon, begin, num_particle);
     for(auto iter = futures.begin(); iter != futures.end(); ++iter)
         iter->get(); // synchronize
 
@@ -196,14 +194,12 @@ UnderdampedLangevin<traitsT>::step(
     for(std::size_t t=0; t < num_threads-1; ++t)
     {
         futures[t] = std::async(std::launch::async,
-                [this, &pcon, &ff, begin, end](){
-                    step_acc_and_half_vel(pcon, ff, begin, end);
-                });
+            [this, &pcon, begin, end](){step_acc_and_half_vel(pcon, begin, end);});
 
         begin += particle_per_thread;
         end   += particle_per_thread;
     }
-    step_acc_and_half_vel(pcon, ff, begin, num_particle);
+    step_acc_and_half_vel(pcon, begin, num_particle);
     for(auto iter = futures.begin(); iter != futures.end(); ++iter)
         iter->get(); // synchronize
 
@@ -212,8 +208,7 @@ UnderdampedLangevin<traitsT>::step(
 
 template<typename traitsT>
 void UnderdampedLangevin<traitsT>::step_pos_and_half_vel(
-        ParticleContainer<traitsT>& pcon, const ForceField<traitsT>& ff,
-        std::size_t i, const std::size_t end)
+        ParticleContainer<traitsT>& pcon, std::size_t i, const std::size_t end)
 {
     for(; i != end; ++i)
     {
@@ -232,15 +227,14 @@ void UnderdampedLangevin<traitsT>::step_pos_and_half_vel(
 
 template<typename traitsT>
 void UnderdampedLangevin<traitsT>::step_acc_and_half_vel(
-        ParticleContainer<traitsT>& pcon, const ForceField<traitsT>& ff,
-        std::size_t i, const std::size_t end)
+        ParticleContainer<traitsT>& pcon, std::size_t i, const std::size_t end)
 {
     for(; i != end; ++i)
     {
         const coordinate_type acc = pcon[i].force / pcon[i].mass;
         acceleration_[i] = acc;
 
-        pcon[i].velocity += halfdt_ * (1. - gamma_[i] * halfdt_) * (acc + noise_[i]);
+        pcon[i].velocity += halfdt_ * (1.-gamma_[i]*halfdt_) * (acc+noise_[i]);
         pcon[i].force = coordinate_type(0., 0., 0.);
     }
     return;
