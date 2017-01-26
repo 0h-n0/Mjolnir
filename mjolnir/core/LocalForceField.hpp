@@ -214,7 +214,7 @@ inline void LocalForceField<traitsT>::calc_bond_force(
         const typename bond_container::const_iterator end) const
 {
     for(; iter != end; ++iter)
-        bond.calc_force(pcon.at(iter->i), pcon.at(iter->j), *(iter->pot));
+        bond.calc_force(pcon[iter->i], pcon[iter->j], *(iter->pot));
     return;
 }
 
@@ -225,7 +225,7 @@ inline void LocalForceField<traitsT>::calc_angle_force(
         const typename angle_container::const_iterator end) const
 {
     for(; iter != end; ++iter)
-        angle.calc_force(pcon.at(iter->i), pcon.at(iter->j), pcon.at(iter->k),
+        angle.calc_force(pcon[iter->i], pcon[iter->j], pcon[iter->k],
                          *(iter->pot));
     return;
 }
@@ -237,8 +237,8 @@ inline void LocalForceField<traitsT>::calc_dihd_force(
         const typename dihd_container::const_iterator end) const
 {
     for(; iter != end; ++iter)
-        dihd.calc_force(pcon.at(iter->i), pcon.at(iter->j), pcon.at(iter->k),
-                        pcon.at(iter->l), *(iter->pot));
+        dihd.calc_force(pcon[iter->i], pcon[iter->j], pcon[iter->k],
+                        pcon[iter->l], *(iter->pot));
     return;
 }
 
@@ -252,7 +252,7 @@ LocalForceField<traitsT>::calc_bond_energy(
     real_type energy = 0.;
     for(; iter != end; ++iter)
         energy += bond.calc_energy(
-                pcon.at(iter->i), pcon.at(iter->j), *(iter->pot));
+                pcon[iter->i], pcon[iter->j], *(iter->pot));
     return energy;
 }
 
@@ -266,8 +266,7 @@ LocalForceField<traitsT>::calc_angle_energy(
     real_type energy = 0.;
     for(; iter != end; ++iter)
         energy += angle.calc_energy(
-                pcon.at(iter->i), pcon.at(iter->j), pcon.at(iter->k),
-                *(iter->pot));
+                pcon[iter->i], pcon[iter->j], pcon[iter->k], *(iter->pot));
     return energy;
 }
 
@@ -281,8 +280,8 @@ LocalForceField<traitsT>::calc_dihd_energy(
     real_type energy = 0.;
     for(; iter != end; ++iter)
         energy += dihd.calc_energy(
-                pcon.at(iter->i), pcon.at(iter->j), pcon.at(iter->k),
-                pcon.at(iter->l), *(iter->pot));
+                pcon[iter->i], pcon[iter->j], pcon[iter->k], pcon[iter->l],
+                *(iter->pot));
     return energy;
 }
 
@@ -342,6 +341,7 @@ void LocalForceField<traitsT>::calc_force(particle_container_type& pcon,
         begin += tasks_per_thread;
         end   += tasks_per_thread;
     }
+
 #ifdef MJOLNIR_DUMP_TIME
     std::cerr << "thread creating loop ends at  : "
               << std::chrono::duration_cast<std::chrono::microseconds>(
@@ -372,6 +372,7 @@ void LocalForceField<traitsT>::calc_force(particle_container_type& pcon,
         iter->wait();
 #endif // dump time
     }
+
 
 #ifdef MJOLNIR_DUMP_TIME
     auto end_t = std::chrono::system_clock::now();
