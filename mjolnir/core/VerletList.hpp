@@ -121,7 +121,6 @@ void VerletList<traitsT>::make(const particle_container_type& pcon)
             }
             else
             {
-                list_.at(i).reserve(pcon.size() - i - 1 - except_.at(i).size());
                 const auto cbeg = except_.at(i).cbegin();
                 const auto cend = except_.at(i).cend();
                 for(std::size_t j=i+1; j<pcon.size(); ++j)
