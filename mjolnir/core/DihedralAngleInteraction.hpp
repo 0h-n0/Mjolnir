@@ -75,16 +75,24 @@ DihedralAngleInteraction<traitsT>::calc_force(
     const real_type coef_jkl = dot_product(r_kl, r_kj) * r_kj_lensq_inv;
 
 #ifdef MJOLNIR_PARALLEL_THREAD
+    const coordinate_type Fj = (coef_ijk - 1e0) * Fi - coef_jkl * Fl;
+    const coordinate_type Fk = (coef_jkl - 1e0) * Fl - coef_ijk * Fi;
+
     std::lock_guard<spinlock> lock1(p1.spin);
     std::lock_guard<spinlock> lock2(p2.spin);
     std::lock_guard<spinlock> lock3(p3.spin);
     std::lock_guard<spinlock> lock4(p4.spin);
-#endif
 
+    p1.force += Fi;
+    p2.force += Fj;
+    p3.force += Fk;
+    p4.force += Fl;
+#else
     p1.force += Fi;
     p2.force += (coef_ijk - 1e0) * Fi - coef_jkl * Fl;
     p3.force += (coef_jkl - 1e0) * Fl - coef_ijk * Fi;
     p4.force += Fl;
+#endif
 
     return;
 }
