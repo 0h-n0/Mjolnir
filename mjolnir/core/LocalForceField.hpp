@@ -291,33 +291,15 @@ template<typename traitsT>
 void LocalForceField<traitsT>::calc_force(particle_container_type& pcon,
         const std::size_t num_threads) const
 {
-#ifdef MJOLNIR_DUMP_TIME
-    std::vector<std::future<timestamp<void>>> futures(num_threads-1);
-#else
     std::vector<std::future<void>> futures(num_threads-1);
-#endif // dump time
 
 // bond ------------------------------------------------------------------------
     {
-#ifdef MJOLNIR_DUMP_TIME
-    auto start = std::chrono::system_clock::now();
-    std::cerr << "calculation of bond starts at : "
-              << std::chrono::duration_cast<std::chrono::microseconds>(
-                      start.time_since_epoch()).count() << std::endl;
-#endif // dump time
-
     const std::size_t tasks_per_thread =
         bond_potentials.size() / num_threads + 1;
 
     auto begin = bond_potentials.cbegin();
     auto end   = bond_potentials.cbegin() + tasks_per_thread;
-
-#ifdef MJOLNIR_DUMP_TIME
-    std::cerr << "thread creating loop starts at: "
-              << std::chrono::duration_cast<std::chrono::microseconds>(
-                     (std::chrono::system_clock::now()).time_since_epoch()).count()
-              << std::endl;
-#endif // dump time
 
     for(std::size_t t=0; t < num_threads-1; ++t)
     {
@@ -325,29 +307,14 @@ void LocalForceField<traitsT>::calc_force(particle_container_type& pcon,
         futures.at(t) = std::async(std::launch::async,
             [b, &pcon, begin, end]()
             {
-#ifdef MJOLNIR_DUMP_TIME
-                timestamp<void> ts; ts.start();
-#endif // dump time
                 for(auto iter = begin; iter != end; ++iter)
                     b.calc_force(pcon.at(iter->i), pcon.at(iter->j),
                                  *(iter->pot));
-#ifdef MJOLNIR_DUMP_TIME
-                ts.stop();
-                return ts;
-#else
                 return ;
-#endif // dump time
             });
         begin += tasks_per_thread;
         end   += tasks_per_thread;
     }
-
-#ifdef MJOLNIR_DUMP_TIME
-    std::cerr << "thread creating loop ends at  : "
-              << std::chrono::duration_cast<std::chrono::microseconds>(
-                     (std::chrono::system_clock::now()).time_since_epoch()).count()
-              << std::endl;
-#endif // dump time
 
     // last one is executed "this" thread.
     end = bond_potentials.cend();
@@ -355,59 +322,16 @@ void LocalForceField<traitsT>::calc_force(particle_container_type& pcon,
         bond.calc_force(pcon.at(begin->i), pcon.at(begin->j), *(begin->pot));
 
     for(auto iter = futures.begin(); iter != futures.end(); ++iter)
-    {
-#ifdef MJOLNIR_DUMP_TIME
-        auto ts = iter->get();
-        std::cerr << "-----------------------------------" << std::endl;
-        std::cerr << "thread starts at              : "
-                  << ts.start_at<std::chrono::microseconds>().count()
-                  << " [usec]" << std::endl;
-        std::cerr << "thread ends at                : "
-                  << ts.stop_at<std::chrono::microseconds>().count()
-                  << " [usec]" << std::endl;
-        std::cerr << "elapsed per thread            : "
-                  << ts.elapsed<std::chrono::microseconds>().count()
-                  << " [usec]" << std::endl;
-#else  // normal one
         iter->wait();
-#endif // dump time
-    }
 
-
-#ifdef MJOLNIR_DUMP_TIME
-    auto end_t = std::chrono::system_clock::now();
-    std::cerr << "-----------------------------------" << std::endl;
-    std::cerr << "calc of bond length ends at   : "
-              << std::chrono::duration_cast<std::chrono::microseconds>(
-                      end_t.time_since_epoch()).count() << " [usec]" << std::endl;
-    std::cerr << "elapsed for bond length/step  : "
-              << std::chrono::duration_cast<std::chrono::microseconds>(
-                      end_t - start).count() << " [usec]" << std::endl;
-    std::cerr << "==================================="<< std::endl;
-    std::cerr << std::endl;
-#endif // dump time
     }
 // angle -----------------------------------------------------------------------
     {
-#ifdef MJOLNIR_DUMP_TIME
-    auto start = std::chrono::system_clock::now();
-    std::cerr << "calculation of angle starts at: "
-              << std::chrono::duration_cast<std::chrono::microseconds>(
-                      start.time_since_epoch()).count() << std::endl;
-#endif // dump time
-
     const std::size_t tasks_per_thread =
         angle_potentials.size() / num_threads + 1;
 
     auto begin = angle_potentials.cbegin();
     auto end   = angle_potentials.cbegin() + tasks_per_thread;
-
-#ifdef MJOLNIR_DUMP_TIME
-    std::cerr << "thread creating loop starts at: "
-              << std::chrono::duration_cast<std::chrono::microseconds>(
-                     (std::chrono::system_clock::now()).time_since_epoch()).count()
-              << std::endl;
-#endif // dump time
 
     for(std::size_t t=0; t < num_threads-1; ++t)
     {
@@ -415,29 +339,14 @@ void LocalForceField<traitsT>::calc_force(particle_container_type& pcon,
         futures.at(t) = std::async(std::launch::async,
             [a, &pcon, begin, end]()
             {
-#ifdef MJOLNIR_DUMP_TIME
-                timestamp<void> ts; ts.start();
-#endif // dump time
                 for(auto iter = begin; iter != end; ++iter)
                     a.calc_force(pcon.at(iter->i), pcon.at(iter->j),
                                  pcon.at(iter->k), *(iter->pot));
-#ifdef MJOLNIR_DUMP_TIME
-                ts.stop();
-                return ts;
-#else
                 return ;
-#endif // dump time
             });
         begin += tasks_per_thread;
         end   += tasks_per_thread;
     }
-
-#ifdef MJOLNIR_DUMP_TIME
-    std::cerr << "thread making loop ends at    : "
-              << std::chrono::duration_cast<std::chrono::microseconds>(
-                     (std::chrono::system_clock::now()).time_since_epoch()).count()
-              << std::endl;
-#endif // dump time
 
     // last one is executed "this" thread.
     end = angle_potentials.cend();
@@ -447,57 +356,14 @@ void LocalForceField<traitsT>::calc_force(particle_container_type& pcon,
     
 
     for(auto iter = futures.begin(); iter != futures.end(); ++iter)
-    {
-#ifdef MJOLNIR_DUMP_TIME
-        auto ts = iter->get();
-        std::cerr << "-----------------------------------" << std::endl;
-        std::cerr << "thread starts at              : "
-                  << ts.start_at<std::chrono::microseconds>().count()
-                  << " [usec]" << std::endl;
-        std::cerr << "thread ends at                : "
-                  << ts.stop_at<std::chrono::microseconds>().count()
-                  << " [usec]" << std::endl;
-        std::cerr << "elapsed per thread            : "
-                  << ts.elapsed<std::chrono::microseconds>().count()
-                  << " [usec]" << std::endl;
-#else
         iter->wait();
-#endif // dump time
-    }
-
-#ifdef MJOLNIR_DUMP_TIME
-    auto end_t = std::chrono::system_clock::now();
-    std::cerr << "-----------------------------------" << std::endl;
-    std::cerr << "calc of bond angle ends at    : "
-              << std::chrono::duration_cast<std::chrono::microseconds>(
-                      end_t.time_since_epoch()).count() << " [usec]" << std::endl;
-    std::cerr << "elapsed for bond angle/step   : "
-              << std::chrono::duration_cast<std::chrono::microseconds>(
-                      end_t - start).count() << " [usec]" << std::endl;
-    std::cerr << "==================================="<< std::endl;
-    std::cerr << std::endl;
-#endif // dump time
     }
 // dihd ------------------------------------------------------------------------
     {
-#ifdef MJOLNIR_DUMP_TIME
-    auto start = std::chrono::system_clock::now();
-    std::cerr << "calculation of dihd starts at : "
-              << std::chrono::duration_cast<std::chrono::microseconds>(
-                      start.time_since_epoch()).count() << std::endl;
-#endif // dump time
-
     const std::size_t tasks_per_thread =
         dihd_potentials.size() / num_threads + 1;
     auto begin = dihd_potentials.cbegin();
     auto end   = dihd_potentials.cbegin() + tasks_per_thread;
-
-#ifdef MJOLNIR_DUMP_TIME
-    std::cerr << "thread creating loop starts at: "
-              << std::chrono::duration_cast<std::chrono::microseconds>(
-                     (std::chrono::system_clock::now()).time_since_epoch()).count()
-              << std::endl;
-#endif // dump time
 
     for(std::size_t t=0; t < num_threads-1; ++t)
     {
@@ -505,30 +371,15 @@ void LocalForceField<traitsT>::calc_force(particle_container_type& pcon,
         futures.at(t) = std::async(std::launch::async,
             [d, &pcon, begin, end]()
             {
-#ifdef MJOLNIR_DUMP_TIME
-                timestamp<void> ts; ts.start();
-#endif
                 for(auto iter = begin; iter != end; ++iter)
                    d.calc_force(pcon.at(iter->i), pcon.at(iter->j),
                                 pcon.at(iter->k), pcon.at(iter->l),
                                 *(iter->pot));
-#ifdef MJOLNIR_DUMP_TIME
-                ts.stop();
-                return ts;
-#else
                 return ;
-#endif
             });
         begin += tasks_per_thread;
         end   += tasks_per_thread;
     }
-
-#ifdef MJOLNIR_DUMP_TIME
-    std::cerr << "thread creating loop ends at  : "
-              << std::chrono::duration_cast<std::chrono::microseconds>(
-                     (std::chrono::system_clock::now()).time_since_epoch()).count()
-              << std::endl;
-#endif // dump time
 
     // last one is executed "this" thread.
     end = dihd_potentials.cend();
@@ -538,38 +389,7 @@ void LocalForceField<traitsT>::calc_force(particle_container_type& pcon,
                        *(begin->pot));
 
     for(auto iter = futures.begin(); iter != futures.end(); ++iter)
-    {
-#ifdef MJOLNIR_DUMP_TIME
-        auto ts = iter->get();
-        std::cerr << "-----------------------------------" << std::endl;
-        std::cerr << "thread starts at              : "
-                  << ts.start_at<std::chrono::microseconds>().count()
-                  << " [usec]" << std::endl;
-        std::cerr << "thread ends at                : "
-                  << ts.stop_at<std::chrono::microseconds>().count()
-                  << " [usec]" << std::endl;
-        std::cerr << "elapsed per thread            : "
-                  << ts.elapsed<std::chrono::microseconds>().count()
-                  << " [usec]" << std::endl;
-#else
         iter->wait();
-#endif
-    }
-
-#ifdef MJOLNIR_DUMP_TIME
-    auto end_t = std::chrono::system_clock::now();
-    std::cerr << "-----------------------------------" << std::endl;
-    std::cerr << "calc of dihd angle ends at    :"
-              << std::chrono::duration_cast<std::chrono::microseconds>(
-                      end_t.time_since_epoch()).count()
-              << std::endl;
- 
-    std::cerr << "elapsed for dihd angle/step   : "
-              << std::chrono::duration_cast<std::chrono::microseconds>(
-                      end_t - start).count() << " [usec]" << std::endl;
-    std::cerr << "==================================="<< std::endl;
-    std::cerr << std::endl;
-#endif
     }
     return;
 }
