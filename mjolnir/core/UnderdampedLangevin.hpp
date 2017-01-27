@@ -53,16 +53,6 @@ class UnderdampedLangevin : public Integrator<traitsT>
 
     void generate_noise(const ParticleContainer<traitsT>& pcon);
 
-#ifdef MJOLNIR_PARALLEL_THREAD
-  private:
-
-    void step_pos_and_half_vel(ParticleContainer<traitsT>& pcon,
-        std::size_t i, const std::size_t end);
-    void step_acc_and_half_vel(ParticleContainer<traitsT>& pcon,
-        std::size_t i, const std::size_t end);
-
-#endif // MJOLNIR_PARALLEL_THREAD
-
   private:
     time_type dt_;      //!< dt
     time_type halfdt_;  //!< dt/2
@@ -172,45 +162,30 @@ UnderdampedLangevin<traitsT>::step(
     const std::size_t particle_per_thread = num_particle / num_threads + 1;
     std::size_t begin = 0;
     std::size_t end = particle_per_thread;
-    for(std::size_t t=0; t < num_threads-1; ++t)
+    for(auto iter = futures.begin(); iter != futures.end(); ++iter)
     {
-        futures[t] = std::async(std::launch::async,
-            [this, &pcon, begin, end](){step_pos_and_half_vel(pcon, begin, end);});
+        *iter = std::async(std::launch::async, [this, &pcon, begin, end]()
+            {
+                for(std::size_t i=begin; i != end; ++i)
+                {
+                    const real_type hgdt   = gamma_[i] * halfdt_;
+                    const real_type o_hgdt = 1. - hgdt;
+                    const coordinate_type noisy_force = noise_[i] + acceleration_[i];
+
+                    pcon[i].position +=
+                        (dt_ * o_hgdt) * (pcon[i].velocity) + halfdt2_ * noisy_force;
+                    pcon[i].velocity *= o_hgdt * (o_hgdt * o_hgdt + hgdt);
+                    pcon[i].velocity += (halfdt_ * o_hgdt) * noisy_force;
+                }
+                return;
+            });
 
         begin += particle_per_thread;
         end   += particle_per_thread;
     }
-    step_pos_and_half_vel(pcon, begin, num_particle);
-    for(auto iter = futures.begin(); iter != futures.end(); ++iter)
-        iter->get(); // synchronize
 
-    // calc f(t+dt)
-    ff.calc_force(pcon, num_threads);
-    this->generate_noise(pcon);
-
-    // calc a(t+dt) and v(t+dt)
-    begin = 0;
-    end = particle_per_thread;
-    for(std::size_t t=0; t < num_threads-1; ++t)
-    {
-        futures[t] = std::async(std::launch::async,
-            [this, &pcon, begin, end](){step_acc_and_half_vel(pcon, begin, end);});
-
-        begin += particle_per_thread;
-        end   += particle_per_thread;
-    }
-    step_acc_and_half_vel(pcon, begin, num_particle);
-    for(auto iter = futures.begin(); iter != futures.end(); ++iter)
-        iter->get(); // synchronize
-
-    return time + dt_;
-}
-
-template<typename traitsT>
-void UnderdampedLangevin<traitsT>::step_pos_and_half_vel(
-        ParticleContainer<traitsT>& pcon, std::size_t i, const std::size_t end)
-{
-    for(; i != end; ++i)
+    // do "this" thread's job
+    for(std::size_t i=begin; i != num_particle; ++i)
     {
         const real_type hgdt   = gamma_[i] * halfdt_;
         const real_type o_hgdt = 1. - hgdt;
@@ -218,26 +193,54 @@ void UnderdampedLangevin<traitsT>::step_pos_and_half_vel(
 
         pcon[i].position +=
             (dt_ * o_hgdt) * (pcon[i].velocity) + halfdt2_ * noisy_force;
-
         pcon[i].velocity *= o_hgdt * (o_hgdt * o_hgdt + hgdt);
         pcon[i].velocity += (halfdt_ * o_hgdt) * noisy_force;
     }
-    return;
-}
 
-template<typename traitsT>
-void UnderdampedLangevin<traitsT>::step_acc_and_half_vel(
-        ParticleContainer<traitsT>& pcon, std::size_t i, const std::size_t end)
-{
-    for(; i != end; ++i)
+    for(auto iter = futures.begin(); iter != futures.end(); ++iter)
+        iter->wait(); // synchronize
+
+    // calc f(t+dt)
+    ff.calc_force(pcon, num_threads);
+
+    // generate random numbers
+    this->generate_noise(pcon);
+
+    // calc a(t+dt) and v(t+dt)
+    begin = 0;
+    end = particle_per_thread;
+    for(auto iter = futures.begin(); iter != futures.end(); ++iter)
+    {
+        *iter = std::async(std::launch::async, [this, &pcon, begin, end]()
+            {
+                for(std::size_t i=begin; i != end; ++i)
+                {
+                    const coordinate_type acc = pcon[i].force / pcon[i].mass;
+                    acceleration_[i] = acc;
+ 
+                    pcon[i].velocity += halfdt_ * (1.-gamma_[i]*halfdt_) * (acc+noise_[i]);
+                    pcon[i].force = coordinate_type(0., 0., 0.);
+                }
+                return;
+            });
+
+        begin += particle_per_thread;
+        end   += particle_per_thread;
+    }
+
+    for(std::size_t i=begin; i != num_particle; ++i)
     {
         const coordinate_type acc = pcon[i].force / pcon[i].mass;
         acceleration_[i] = acc;
-
+ 
         pcon[i].velocity += halfdt_ * (1.-gamma_[i]*halfdt_) * (acc+noise_[i]);
         pcon[i].force = coordinate_type(0., 0., 0.);
     }
-    return;
+
+    for(auto iter = futures.begin(); iter != futures.end(); ++iter)
+        iter->wait(); // synchronize
+
+    return time + dt_;
 }
 
 #endif // MJOLNIR_PARALLEL_THREAD
