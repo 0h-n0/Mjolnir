@@ -26,12 +26,12 @@ read_global_potential(const std::string& name, const toml::Table& potent)
         for(auto iter = make_zip(param_table.cbegin(), params.begin());
                 iter != make_zip(param_table.cend(), params.end()); ++iter)
         {
-            const typename traitsT::real_type sigma = 
+            const typename traitsT::real_type sigma =
                 toml::get<toml::Float>(get<0>(iter)->at("sigma"));
 
             *get<1>(iter) = sigma;
         }
-        const typename traitsT::real_type epsilon = 
+        const typename traitsT::real_type epsilon =
             toml::get<toml::Float>(potent.at("epsilon"));
 
         return make_unique<ExcludedVolumePotential<traitsT>>(
@@ -47,9 +47,9 @@ read_global_potential(const std::string& name, const toml::Table& potent)
         for(auto iter = make_zip(param_table.cbegin(), params.begin());
                 iter != make_zip(param_table.cend(), params.end()); ++iter)
         {
-            const typename traitsT::real_type sigma = 
+            const typename traitsT::real_type sigma =
                 toml::get<toml::Float>(get<0>(iter)->at("sigma"));
-            const typename traitsT::real_type epsilon = 
+            const typename traitsT::real_type epsilon =
                 toml::get<toml::Float>(get<0>(iter)->at("epsilon"));
 
             *get<1>(iter) = std::make_pair(sigma, epsilon);
@@ -58,7 +58,7 @@ read_global_potential(const std::string& name, const toml::Table& potent)
         return make_unique<LennardJonesPotential<traitsT>>(
                 std::move(params));
     }
-    else 
+    else
         throw std::runtime_error("unknown potential: " + name);
 }
 
@@ -74,7 +74,7 @@ read_global_interaction(const std::string& name,
 
         typename traitsT::real_type mergin = 1.0;
         try{mergin = toml::get<toml::Float>(potent.at("mergin"));}
-        catch(toml::exception& except){mergin = 1.0;}
+        catch(std::exception& except){mergin = 1.0;}
 
         auto space = make_unique<VerletList<traitsT>>(cutoff, cutoff * mergin);
 
@@ -104,14 +104,14 @@ read_global_force_field(const toml::Array<toml::Table>& gffs)
 
     for(auto iter = gffs.cbegin(); iter != gffs.cend(); ++iter)
     {
-        const std::string potential = 
+        const std::string potential =
             toml::get<toml::String>(iter->at("potential"));
-        std::unique_ptr<GlobalPotentialBase<traitsT>> pot = 
+        std::unique_ptr<GlobalPotentialBase<traitsT>> pot =
             read_global_potential<traitsT>(potential, *iter);
 
-        const std::string interaction = 
+        const std::string interaction =
             toml::get<toml::String>(iter->at("interaction"));
-        std::unique_ptr<GlobalInteractionBase<traitsT>> inter = 
+        std::unique_ptr<GlobalInteractionBase<traitsT>> inter =
             read_global_interaction<traitsT>(interaction, pot, *iter);
 
         gff.emplace(std::move(inter), std::move(pot));
