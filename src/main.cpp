@@ -2,6 +2,7 @@
 #include <mjolnir/core/Observer.hpp>
 #include <mjolnir/core/DefaultTraits.hpp>
 #include <mjolnir/io/toml.hpp>
+#include <chrono>
 typedef mjolnir::DefaultTraits traits;
 
 int main(int argc, char** argv)
@@ -49,6 +50,7 @@ int main(int argc, char** argv)
     // run md
     std::cerr << "start running simulation" << std::endl;
     simulator.initialize();
+    auto start = std::chrono::system_clock::now();
     for(std::size_t i=0; i<total_step; ++i)
     {
         if(i % save_step == 0)
@@ -66,6 +68,10 @@ int main(int argc, char** argv)
     // output last state
     obs.output_coordinate(simulator);
     obs.output_energy(simulator);
+    auto stop = std::chrono::system_clock::now();
+    std::cout << "elapsed "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count()
+              << " [msec]" << std::endl;
 
     return 0;
 }

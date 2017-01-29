@@ -14,11 +14,13 @@ class spinlock
     void lock()
     {
         while(state_.test_and_set(std::memory_order_acquire)){/* spin! */;}
+        return;
     }
 
     void unlock()
     {
         state_.clear(std::memory_order_release);
+        return;
     }
 
   private:

@@ -14,7 +14,13 @@
 #include <thread>
 #include <future>
 #include <mutex>
+#include <atomic>
 #endif
+
+#ifdef MJOLNIR_DUMP_TIME
+#include <iostream>
+#include <mjolnir/util/time_stamp.hpp>
+#endif // MJOLNIR_DUMP_TIME
 
 namespace mjolnir
 {
@@ -288,59 +294,103 @@ void LocalForceField<traitsT>::calc_force(particle_container_type& pcon,
     std::vector<std::future<void>> futures(num_threads-1);
 
 // bond ------------------------------------------------------------------------
-    const std::size_t bsize = bond_potentials.size();
-    const std::size_t bonds_per_thread = bsize / num_threads + 1;
+    {
+    const std::size_t tasks_per_thread =
+        bond_potentials.size() / num_threads + 1;
+
+    auto begin = bond_potentials.cbegin();
+    auto end   = bond_potentials.cbegin() + tasks_per_thread;
+
     for(std::size_t t=0; t < num_threads-1; ++t)
     {
-        auto begin = bond_potentials.cbegin() + t * bonds_per_thread;
-        auto end   = bond_potentials.cbegin() + (t+1) * bonds_per_thread;
+        auto b = this->bond;
         futures.at(t) = std::async(std::launch::async,
-            [this, &pcon, begin, end](){calc_bond_force(pcon, begin, end);});
+            [b, &pcon, begin, end]()
+            {
+                for(auto iter = begin; iter != end; ++iter)
+                    b.calc_force(pcon.at(iter->i), pcon.at(iter->j),
+                                 *(iter->pot));
+                return ;
+            });
+        begin += tasks_per_thread;
+        end   += tasks_per_thread;
     }
-    {// last one is executed in "this" thread.
-        auto begin = bond_potentials.cbegin() + (num_threads - 1) * bonds_per_thread;
-        auto end = bond_potentials.cend();
-        calc_bond_force(pcon, begin, end);
-    }
-    for(std::size_t t = 0; t < num_threads-1; ++t)
-        futures.at(t).get();
 
+    // last one is executed "this" thread.
+    end = bond_potentials.cend();
+    for(; begin != end; ++begin)
+        bond.calc_force(pcon.at(begin->i), pcon.at(begin->j), *(begin->pot));
+
+    for(auto iter = futures.begin(); iter != futures.end(); ++iter)
+        iter->wait();
+
+    }
 // angle -----------------------------------------------------------------------
-    const std::size_t asize = angle_potentials.size();
-    const std::size_t angles_per_thread = asize / num_threads + 1;
+    {
+    const std::size_t tasks_per_thread =
+        angle_potentials.size() / num_threads + 1;
+
+    auto begin = angle_potentials.cbegin();
+    auto end   = angle_potentials.cbegin() + tasks_per_thread;
+
     for(std::size_t t=0; t < num_threads-1; ++t)
     {
-        auto begin = angle_potentials.cbegin() + t     * angles_per_thread;
-        auto end   = angle_potentials.cbegin() + (t+1) * angles_per_thread;
+        auto a = this->angle;
         futures.at(t) = std::async(std::launch::async,
-            [this, &pcon, begin, end](){calc_angle_force(pcon, begin, end);});
+            [a, &pcon, begin, end]()
+            {
+                for(auto iter = begin; iter != end; ++iter)
+                    a.calc_force(pcon.at(iter->i), pcon.at(iter->j),
+                                 pcon.at(iter->k), *(iter->pot));
+                return ;
+            });
+        begin += tasks_per_thread;
+        end   += tasks_per_thread;
     }
-    {// last one is executed in "this" thread.
-        auto begin = angle_potentials.cbegin() + (num_threads - 1) * angles_per_thread;
-        auto end   = angle_potentials.cend();
-        calc_angle_force(pcon, begin, end);
-    }
-    for(std::size_t t = 0; t < num_threads-1; ++t)
-        futures.at(t).get();
 
+    // last one is executed "this" thread.
+    end = angle_potentials.cend();
+    for(; begin != end; ++begin)
+        angle.calc_force(pcon.at(begin->i), pcon.at(begin->j),
+                         pcon.at(begin->k), *(begin->pot));
+    
+
+    for(auto iter = futures.begin(); iter != futures.end(); ++iter)
+        iter->wait();
+    }
 // dihd ------------------------------------------------------------------------
-    const std::size_t dsize = dihd_potentials.size();
-    const std::size_t dihds_per_thread = dsize / num_threads + 1;
+    {
+    const std::size_t tasks_per_thread =
+        dihd_potentials.size() / num_threads + 1;
+    auto begin = dihd_potentials.cbegin();
+    auto end   = dihd_potentials.cbegin() + tasks_per_thread;
+
     for(std::size_t t=0; t < num_threads-1; ++t)
     {
-        auto begin = dihd_potentials.cbegin() + t     * dihds_per_thread;
-        auto end   = dihd_potentials.cbegin() + (t+1) * dihds_per_thread;
+        auto d = this->dihd;
         futures.at(t) = std::async(std::launch::async,
-            [this, &pcon, begin, end](){calc_dihd_force(pcon, begin, end);});
+            [d, &pcon, begin, end]()
+            {
+                for(auto iter = begin; iter != end; ++iter)
+                   d.calc_force(pcon.at(iter->i), pcon.at(iter->j),
+                                pcon.at(iter->k), pcon.at(iter->l),
+                                *(iter->pot));
+                return ;
+            });
+        begin += tasks_per_thread;
+        end   += tasks_per_thread;
     }
-    {// last one is executed in "this" thread.
-        auto begin = dihd_potentials.cbegin() + (num_threads - 1) * dihds_per_thread;
-        auto end   = dihd_potentials.cend();
-        calc_dihd_force(pcon, begin, end);
-    }
-    for(std::size_t t = 0; t < num_threads-1; ++t)
-        futures.at(t).get();
 
+    // last one is executed "this" thread.
+    end = dihd_potentials.cend();
+    for(; begin != end; ++begin)
+       dihd.calc_force(pcon.at(begin->i), pcon.at(begin->j),
+                       pcon.at(begin->k), pcon.at(begin->l),
+                       *(begin->pot));
+
+    for(auto iter = futures.begin(); iter != futures.end(); ++iter)
+        iter->wait();
+    }
     return;
 }
 
