@@ -65,7 +65,7 @@ int main(int argc, char **argv)
         const std::string name = (*iter)->name();
         const typename traits::real_type m = mass[name];
 
-        const auto pos = (*iter)->position(0);
+        const auto pos = (*iter)->position();
         const auto vel = rng.maxwell_boltzmann(m, T, kB);
         const auto acc = traits::coordinate_type(0., 0., 0.);
 

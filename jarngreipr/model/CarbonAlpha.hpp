@@ -34,24 +34,27 @@ class CarbonAlpha : public Bead<traitsT>
     {}
     ~CarbonAlpha() = default;
 
-    coordinate_type position(const std::size_t i) const override;
+    coordinate_type position() const override;
 };
 
 template<typename traitsT>
 typename CarbonAlpha<traitsT>::coordinate_type
-CarbonAlpha<traitsT>::position(const std::size_t i) const
+CarbonAlpha<traitsT>::position() const
 {
     auto finder = [](const atom_type& a){return a.atom_name == "CA";};
 
     const std::size_t num_ca =
         std::count_if(this->atoms_.cbegin(), this->atoms_.cend(), finder);
-    if(num_ca == 0)
-        throw std::runtime_error("Ca: no c-alpha atom in this residue");
-    else if(num_ca <= i)
-        throw std::out_of_range(std::string("Ca: ") + std::to_string(i) +
-                                std::string("-th Calpha does not exists"));
 
-    const auto ca = std::find_if(this->atoms_.cbegin(), this->atoms_.cend(), finder);
+    if(num_ca == 0)
+        throw std::runtime_error(
+                "jarngreipr::Ca::position: no C-alpha atom in this residue");
+    else if(num_ca > 1)
+        throw std::out_of_range(
+                "jarngreipr::Ca::position: too many C-alphas in the bead");
+
+    const auto ca =
+        std::find_if(this->atoms_.cbegin(), this->atoms_.cend(), finder);
     return ca->position;
 }
 

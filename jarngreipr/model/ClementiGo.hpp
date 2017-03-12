@@ -105,8 +105,8 @@ void ClementiGo<traitsT>::make(const chain_container_type& chains)
              {
                 if(min_distance_heavy_atom_sq(*iter, *jter) < threshold2)
                 {
-                    const auto dist = distance(this->beads_.at(i)->position(0),
-                                               this->beads_.at(j)->position(0));
+                    const auto dist = distance(this->beads_.at(i)->position(),
+                                               this->beads_.at(j)->position());
                     std::array<std::size_t, 2> indices{{i, j}};
                     this->go_contact_.emplace_back(indices, dist);
                     this->exception_.at(i).push_back(j);
@@ -132,27 +132,27 @@ void ClementiGo<traitsT>::make(const chain_container_type& chains)
             {
                 const std::array<std::size_t, 2> indices{{i, i+1}};
                 bond_length_.emplace_back(indices, distance(
-                        this->beads_.at(i)->position(0),
-                        this->beads_.at(i+1)->position(0)));
+                        this->beads_.at(i  )->position(),
+                        this->beads_.at(i+1)->position()));
             }
 
             if(i+2 < this->beads_.size()) // angle
             {
                 const std::array<std::size_t, 3> indices{{i, i+1, i+2}};
                 bond_angle_.emplace_back(indices, angle(
-                        this->beads_.at(i)->position(0),
-                        this->beads_.at(i+1)->position(0),
-                        this->beads_.at(i+2)->position(0)));
+                        this->beads_.at(i  )->position(),
+                        this->beads_.at(i+1)->position(),
+                        this->beads_.at(i+2)->position()));
             }
 
             if(i+3 < this->beads_.size()) // dihd
             {
                 const std::array<std::size_t, 4> indices{{i, i+1, i+2, i+3}};
                 dihedral_angle_.emplace_back(indices, dihedral_angle(
-                            this->beads_.at(i  )->position(0),
-                            this->beads_.at(i+1)->position(0),
-                            this->beads_.at(i+2)->position(0),
-                            this->beads_.at(i+3)->position(0)));
+                            this->beads_.at(i  )->position(),
+                            this->beads_.at(i+1)->position(),
+                            this->beads_.at(i+2)->position(),
+                            this->beads_.at(i+3)->position()));
             }
         }
         }// bond, angle, dihd
@@ -174,8 +174,8 @@ void ClementiGo<traitsT>::make(const chain_container_type& chains)
                 {
                     if(min_distance_heavy_atom_sq(*lhs, *rhs) < threshold2)
                     {
-                        const auto dist = distance(this->beads_.at(i)->position(0),
-                                                   this->beads_.at(j)->position(0));
+                        const auto dist = distance(this->beads_.at(i)->position(),
+                                                   this->beads_.at(j)->position());
                         const std::array<std::size_t, 2> indices{{i, j}};
                         this->go_contact_.emplace_back(indices, dist);
                         this->exception_.at(i).push_back(j);

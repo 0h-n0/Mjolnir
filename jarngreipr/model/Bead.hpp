@@ -21,13 +21,23 @@ class Bead
   public:
 
     Bead() = default;
+    virtual ~Bead() = default;
+    Bead(const Bead&) = default;
+    Bead(Bead&&)      = default;
+    Bead& operator=(const Bead&) = default;
+    Bead& operator=(Bead&&)      = default;
+
     explicit Bead(const container_type& atoms) : atoms_(atoms){}
     explicit Bead(const std::string& name) : name_(name){}
     Bead(const container_type& atoms, const std::string& name)
-        : atoms_(atoms), name_(name){}
-    ~Bead() = default;
+        : atoms_(atoms), name_(name)
+    {}
+    Bead(container_type&& atoms, std::string&& name)
+        : atoms_(std::forward<container_type>(atoms)),
+          name_(std::forward<std::string>(name))
+    {}
 
-    virtual coordinate_type position(const std::size_t i) const = 0;
+    virtual coordinate_type position() const = 0;
 
     container_type const& atoms() const {return atoms_;}
     container_type &      atoms()       {return atoms_;}
