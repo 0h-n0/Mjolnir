@@ -3,31 +3,41 @@
 #include <tuple>
 #include <utility>
 #include <string>
+#include <array>
 #include <ostream>
 
 namespace jarngreipr
 {
 
-template<typename traitsT, typename ... paramTs>
+template<typename traitsT, std::size_t N, typename ... paramTs>
 struct Interaction
 {
   public:
     typedef traitsT traits_type;
     typedef typename traits_type::real_type real_type;
     typedef typename traits_type::coordinate_type coordinate_type;
-    typedef std::vector<std::size_t> indices_type;
+    typedef std::array<std::size_t, N> indices_type;
     typedef std::tuple<std::pair<std::string, paramTs>...> params_type;
 
   public:
-    InteractionBase()  = default;
-    virtual ~InteractionBase() = default;
+    Interaction()  = default;
+    virtual ~Interaction() = default;
 
-    void add_index(std::size_t i){indices_.emplace_back(i);}
+    std::size_t& index_at(std::size_t i)       {return indices_.at(i);}
+    std::size_t  index_at(std::size_t i) const {return indices_.at(i);}
 
     template<std::size_t I>
-    void add_parameter(const std::tuple_element<I, params_type>::type& para)
+    typename std::tuple_element<I, params_type>::type&
+    parameter_at()
     {
-        std::get<I>(parameters_) = para;
+        return std::get<I>(parameters_);
+    }
+
+    template<std::size_t I>
+    typename std::tuple_element<I, params_type>::type const&
+    parameter_at() const
+    {
+        return std::get<I>(parameters_);
     }
 
     indices_type const& indices()    const {return indices_;}
@@ -69,10 +79,11 @@ struct output_params_impl<charT, char_traits, traitsT, 1, Ts...>
 
 }//detail
 
-template<typename charT, typename char_traits, typename traitsT, typename ... Ts>
+template<typename charT, typename char_traits,
+         typename traitsT, std::size_t N, typename ... Ts>
 std::basic_ostream<charT, char_traits>&
 operator<<(std::basic_ostream<charT, char_traits>& os,
-           const Interaction<traitsT, Ts...>& interaction)
+           const Interaction<traitsT, N, Ts...>& interaction)
 {
     os << "{indices=[";
     for(auto iter : interaction.indices())
