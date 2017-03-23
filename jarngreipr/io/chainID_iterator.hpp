@@ -3,10 +3,13 @@
 #include <string>
 #include <iterator>
 
+namespace jarngreipr
+{
+
 struct chainID_iterator
 {
     // represent only range [A, ZZ]
-    typedef std::string        difference_type;
+    typedef std::size_t        difference_type;
     typedef std::string        value_type;
     typedef std::string const* pointer;
     typedef std::string const& reference;
@@ -120,4 +123,5 @@ inline bool operator>=(chainID_iterator const& lhs, chainID_iterator const& rhs)
     return !(lhs < rhs);
 }
 
+}// jarngreipr
 #endif //JARNGREIPR_IO_CHAIN_ID_ITERATOR
