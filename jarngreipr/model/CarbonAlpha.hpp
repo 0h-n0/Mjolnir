@@ -24,22 +24,46 @@ class CarbonAlpha : public Bead<traitsT>
   public:
 
     CarbonAlpha() = default;
-    CarbonAlpha(const residue_type& residue) : base_type(residue.atoms()){}
-    CarbonAlpha(const container_type& atoms) : base_type(atoms){}
+    CarbonAlpha(const residue_type& residue)
+        : base_type(residue.atoms())
+    {
+        this->init_();
+    }
+    CarbonAlpha(const container_type& atoms)
+        : base_type(atoms)
+    {
+        this->init_();
+    }
     CarbonAlpha(const residue_type& residue, const std::string& name)
         : base_type(residue.atoms(), name)
-    {}
+    {
+        this->init_();
+    }
     CarbonAlpha(const container_type& atoms, const std::string& name)
         : base_type(atoms, name)
-    {}
+    {
+        this->init_();
+    }
     ~CarbonAlpha() = default;
 
-    coordinate_type position() const override;
+    CarbonAlpha(const CarbonAlpha&) = default;
+    CarbonAlpha(CarbonAlpha&&)      = default;
+    CarbonAlpha& operator=(const CarbonAlpha&) = default;
+    CarbonAlpha& operator=(CarbonAlpha&&)      = default;
+
+    coordinate_type const& position() const override {return position_;}
+
+  private:
+
+    void init_();
+
+  private:
+
+    coordinate_type position_;
 };
 
 template<typename traitsT>
-typename CarbonAlpha<traitsT>::coordinate_type
-CarbonAlpha<traitsT>::position() const
+void CarbonAlpha<traitsT>::init_()
 {
     auto finder = [](const atom_type& a){return a.atom_name == "CA";};
 
@@ -53,9 +77,10 @@ CarbonAlpha<traitsT>::position() const
         throw std::out_of_range(
                 "jarngreipr::Ca::position: too many C-alphas in the bead");
 
-    const auto ca =
-        std::find_if(this->atoms_.cbegin(), this->atoms_.cend(), finder);
-    return ca->position;
+    this->position_ =
+        std::find_if(this->atoms_.cbegin(), this->atoms_.cend(),
+                     finder)->position;
+    return ;
 }
 
 }//jarngreipr
