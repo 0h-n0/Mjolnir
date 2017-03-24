@@ -1,6 +1,7 @@
 #ifndef JARNGREIPR_BEAD
 #define JARNGREIPR_BEAD
 #include <jarngreipr/io/PDBAtom.hpp>
+#include <ostream>
 #include <vector>
 #include <string>
 
@@ -38,6 +39,10 @@ class Bead
     {}
 
     virtual coordinate_type position() const = 0;
+
+    template<typename charT, typename ctrait>
+    virtual std::basic_ostream<charT, ctrait>&
+    print(std::basic_ostream<charT, ctrait>& os) const;
 
     container_type const& atoms() const {return atoms_;}
     container_type &      atoms()       {return atoms_;}

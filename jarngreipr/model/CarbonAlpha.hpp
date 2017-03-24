@@ -53,6 +53,10 @@ class CarbonAlpha : public Bead<traitsT>
 
     coordinate_type const& position() const override {return position_;}
 
+    template<typename charT, typename ctrait>
+    std::basic_ostream<charT, ctrait>&
+    print(std::basic_ostream<charT, ctrait>& os) const override;
+
   private:
 
     void init_();
@@ -82,6 +86,18 @@ void CarbonAlpha<traitsT>::init_()
                      finder)->position;
     return ;
 }
+
+template<typename traitsT>
+template<typename charT, typename ctrait>
+std::basic_ostream<charT, ctrait>&
+CarbonAlpha<traitsT>::print(std::basic_ostream<charT, ctrait>& os) const
+{
+    auto finder = [](const atom_type& a){return a.atom_name == "CA";};
+    os << *(std::find_if(this->atoms_.cbegin(), this->atoms_.cend(), finder));
+    return os;
+}
+
+
 
 }//jarngreipr
 #endif /*JARNGREIPR_CARBON_ALPHA*/
