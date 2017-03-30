@@ -40,9 +40,7 @@ class Bead
 
     virtual coordinate_type position() const = 0;
 
-    template<typename charT, typename ctrait>
-    virtual std::basic_ostream<charT, ctrait>&
-    print(std::basic_ostream<charT, ctrait>& os) const;
+    virtual std::ostream& print(std::ostream& os) const = 0;
 
     container_type const& atoms() const {return atoms_;}
     container_type &      atoms()       {return atoms_;}
@@ -50,8 +48,12 @@ class Bead
     std::string const& name() const {return name_;}
     std::string &      name()       {return name_;}
 
+    std::size_t const& bead_id() const {return bead_id_;}
+    std::size_t &      bead_id()       {return bead_id_;}
+
   protected:
 
+    std::size_t     bead_id_;
     std::string     name_;
     container_type  atoms_;
 };
