@@ -26,15 +26,6 @@ class Model
 
     Model() = default;
     ~Model() = default;
-
-    virtual void apply(const chain_type& chain) const = 0;
-
-    bead_containter_type const& beads() const {return beads_;}
-    bead_containter_type&       beads()       {return beads_;}
-
-  protected:
-
-    bead_container_type beads_;
 };
 
 }//jarngreipr
