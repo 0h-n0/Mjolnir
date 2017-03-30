@@ -26,5 +26,17 @@ unpack_chainID(const std::pair<std::string, T>& value)
     return retval;
 }
 
+inline std::vector<std::string>
+unpack_chainID(const std::string& value)
+{
+    const auto splitted = megingjord::split(value, '-');
+    if(splitted.size() > 2)
+        throw std::invalid_argument("too much chains");
+
+    chainID_iterator first(splitted.front()), last(splitted.back());
+    std::vector<std::string> retval(first, std::next(last));
+    return retval;
+}
+
 }// jarngreipr
 #endif // JARNGREIPR_IO_UNPACK_CHAIN_ID
