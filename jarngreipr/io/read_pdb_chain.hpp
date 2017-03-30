@@ -6,7 +6,7 @@ namespace jarngreipr
 {
 
 template<typename traitsT>
-PDBChain<traits_type>
+PDBChain<traitsT>
 read_pdb_chain(const std::string& fname, const std::string& chainID)
 {
     PDBReader<traitsT> reader;
