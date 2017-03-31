@@ -1,16 +1,16 @@
 #ifndef JARNGREIPR_MODEL_INTERACTION
 #define JARNGREIPR_MODEL_INTERACTION
+#include "output_parameters.hpp"
 #include <tuple>
 #include <utility>
 #include <string>
 #include <array>
-#include <ostream>
 
 namespace jarngreipr
 {
 
 template<typename traitsT, std::size_t N, typename ... paramTs>
-struct Interaction
+struct LocalInteractionParameter
 {
   public:
     typedef traitsT traits_type;
@@ -20,8 +20,8 @@ struct Interaction
     typedef std::tuple<std::pair<std::string, paramTs>...> params_type;
 
   public:
-    Interaction()  = default;
-    virtual ~Interaction() = default;
+    LocalInteractionParameter()  = default;
+    virtual ~LocalInteractionParameter() = default;
 
     std::size_t& index_at(std::size_t i)       {return indices_.at(i);}
     std::size_t  index_at(std::size_t i) const {return indices_.at(i);}
@@ -48,42 +48,11 @@ struct Interaction
     params_type parameters_;
 };
 
-namespace detail
-{
-
-template<typename charT, typename char_traits, std::size_t I, typename ... Ts>
-struct output_params_impl
-{
-    static std::basic_ostream<charT, char_traits>&
-    invoke(std::basic_ostream<charT, char_traits>& os,
-           const std::tuple<std::pair<std::string, Ts>...>& paras)
-    {
-        os << std::get<sizeof...(Ts) - I>(paras).first << '='
-           << std::get<sizeof...(Ts) - I>(paras).second << ',';
-        return output_params_impl<charT, char_traits, I-1, Ts...>::invoke(os, paras);
-    }
-};
-
-template<typename charT, typename char_traits, typename ... Ts>
-struct output_params_impl<charT, char_traits, traitsT, 1, Ts...>
-{
-    static std::basic_ostream<charT, char_traits>&
-    invoke(std::basic_ostream<charT, char_traits>& os,
-           const std::tuple<std::pair<std::string, Ts>...>& paras)
-    {
-        os << std::get<sizeof...(Ts)-1>(paras).first << '='
-           << std::get<sizeof...(Ts)-1>(paras).second;
-        return os;
-    }
-};
-
-}//detail
-
 template<typename charT, typename char_traits,
          typename traitsT, std::size_t N, typename ... Ts>
 std::basic_ostream<charT, char_traits>&
 operator<<(std::basic_ostream<charT, char_traits>& os,
-           const Interaction<traitsT, N, Ts...>& interaction)
+           const LocalInteractionParameter<traitsT, N, Ts...>& interaction)
 {
     os << "{indices=[";
     for(auto iter : interaction.indices())
