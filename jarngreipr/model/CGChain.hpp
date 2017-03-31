@@ -1,5 +1,6 @@
 #ifndef JARNGREIPR_CG_CHAIN
 #define JARNGREIPR_CG_CHAIN
+#include "Bead.hpp"
 
 namespace jarngreipr
 {
@@ -22,6 +23,10 @@ class CGChain
 
     CGChain()  = default;
     ~CGChain() = default;
+    CGChain(CGChain&&)             = default;
+    CGChain& operator=(CGChain&&)  = default;
+    CGChain(const CGChain&)             = delete;
+    CGChain& operator=(const CGChain&)  = delete;
 
     void push_back(bead_ptr&& bead)
     {
@@ -31,7 +36,7 @@ class CGChain
     template<typename ...Ts>
     void emplace_back(Ts&& ... args)
     {
-        beads_.push_back(std::forward<Ts>(args)...);
+        beads_.emplace_back(std::forward<Ts>(args)...);
     }
 
     std::string&       chainID()       {return id_;}
