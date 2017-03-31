@@ -1,9 +1,9 @@
 #ifndef JARNGREIPR_GEOMETRY_DISTANCE
 #define JARNGREIPR_GEOMETRY_DISTANCE
 #include <jarngreipr/model/Bead.hpp>
-#include <jarngreipr/io/PDBAtom.hpp>
-#include <jarngreipr/io/PDBResidue.hpp>
-#include <jarngreipr/io/PDBChain.hpp>
+#include <jarngreipr/pdb/PDBAtom.hpp>
+#include <jarngreipr/pdb/PDBResidue.hpp>
+#include <jarngreipr/pdb/PDBChain.hpp>
 #include <mjolnir/math/Vector.hpp>
 
 namespace jarngreipr

@@ -1,6 +1,6 @@
 #ifndef JARNGREIPR_BEAD
 #define JARNGREIPR_BEAD
-#include <jarngreipr/io/PDBAtom.hpp>
+#include <jarngreipr/pdb/PDBAtom.hpp>
 #include <ostream>
 #include <vector>
 #include <string>
