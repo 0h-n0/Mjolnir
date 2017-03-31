@@ -1,6 +1,7 @@
 #ifndef JARNGREIPR_CARBON_ALPHA_MODEL
 #define JARNGREIPR_CARBON_ALPHA_MODEL
 #include "CarbonAlpha.hpp"
+#include "CGChain.hpp"
 #include "Model.hpp"
 
 namespace jarngreipr
@@ -25,14 +26,14 @@ class CarbonAlphaModel : public Model<traitsT>
     ~CarbonAlphaModel() = default;
 
     static
-    bead_container_type apply(const chain_type& chain);
+    CGChain<traitsT> apply(const chain_type& chain);
 };
 
 template<typename traitsT>
-typename CarbonAlphaModel<traitsT>::bead_container_type
-CarbonAlphaModel<traitsT>::apply(const chain_type& chain)
+CGChain<traitsT> CarbonAlphaModel<traitsT>::apply(const chain_type& chain)
 {
-    bead_container_type beads;
+    CGChain<traitsT> beads;
+    beads.chainID() = chain.chain_id();
     for(auto iter = chain.cbegin(); iter != chain.cend(); ++iter)
         beads.emplace_back(new CarbonAlpha<traitsT>(*iter, "CA"));
     return beads;

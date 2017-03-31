@@ -1,14 +1,14 @@
 #ifndef JARNGREIPR_APPLY_MODEL
 #define JARNGREIPR_APPLY_MODEL
+#include "CGChain.hpp"
 #include "CarbonAlphaModel.hpp"
 
 namespace jarngreipr
 {
 
 template<typename traitsT>
-typename Model<traitsT>::bead_container_type
-apply_model(const std::string& model,
-            const typename Model<traitsT>::chain_type& chain)
+CGChain<traitsT>
+apply_model(const std::string& model, const PDBChain<traitsT>& chain)
 {
     if(model == "CarbonAlpha")
     {
