@@ -1,6 +1,7 @@
 #ifndef JARNGREIPR_CG_CHAIN
 #define JARNGREIPR_CG_CHAIN
 #include "Bead.hpp"
+#include <memory>
 
 namespace jarngreipr
 {

@@ -2,6 +2,7 @@
 #define JARNGREIPR_IO_CHAIN_ID_ITERATOR
 #include <string>
 #include <iterator>
+#include <stdexcept>
 
 namespace jarngreipr
 {
