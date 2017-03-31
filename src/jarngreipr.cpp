@@ -1,115 +1,161 @@
-#include <jarngreipr/io/PDBReader.hpp>
-#include <jarngreipr/model/ClementiGo.hpp>
+#include <jarngreipr/pdb/unpack_chainID.hpp>
+#include <jarngreipr/pdb/read_pdb_chain.hpp>
+#include <jarngreipr/model/apply_model.hpp>
+
 #include <mjolnir/core/DefaultTraits.hpp>
 #include <mjolnir/core/RandomNumberGenerator.hpp>
+#include <toml/toml.hpp>
 #include <map>
 
 typedef mjolnir::DefaultTraits traits;
-
-constexpr static double T = 300.0;
-constexpr static double kB = 1.986231313e-3;
 
 int main(int argc, char **argv)
 {
     if(argc != 2)
     {
-        std::cerr << "./jarngreipr [file.pdb]" << std::endl;
+        std::cerr << "./jarngreipr [file.toml]" << std::endl;
         return 1;
     }
-    mjolnir::RandomNumberGenerator<traits> rng(1234567);
-    std::map<std::string, double> mass;
-    mass["ALA"] = 71.09;
-    mass["ARG"] = 156.19;
-    mass["ASN"] = 114.11;
-    mass["ASP"] = 115.09;
-    mass["CYS"] = 103.15;
-    mass["GLN"] = 128.14;
-    mass["GLU"] = 129.12;
-    mass["GLY"] = 57.05;
-    mass["HIS"] = 137.14;
-    mass["ILE"] = 113.16;
-    mass["LEU"] = 113.16;
-    mass["LYS"] = 128.17;
-    mass["MET"] = 131.19;
-    mass["PHE"] = 147.18;
-    mass["PRO"] = 97.12;
-    mass["SER"] = 87.08;
-    mass["THR"] = 101.11;
-    mass["TRP"] = 186.21;
-    mass["TYR"] = 163.18;
-    mass["VAL"] = 99.14;
-    std::cerr << "parameter setup end" << std::endl;
 
-    // hardly-coding c-alpha model
-    std::string fname(argv[1]);
-    jarngreipr::PDBReader<traits> pdb;
-    auto atoms  = pdb.read(fname);
-    std::cerr << atoms.size() << " particles found" << std::endl;
-    auto chains = pdb.parse(atoms);
-    std::cerr << chains.size() << " chains found" << std::endl;
-
-    jarngreipr::ClementiGo<traits> clementigo;
-    clementigo.make(chains);
-
-    // output
-
-    // particles
-
-    std::cout << "number_of_particle = " << clementigo.beads().size() << std::endl;
-    std::vector<double> fric_consts;
-    std::cout << "# particles {{{" << std::endl;
-    std::cout << "particles = [" << std::endl;
-    for(auto iter = clementigo.beads().cbegin();
-            iter != clementigo.beads().cend(); ++iter) // bead
+    std::ifstream tomlfile(argv[1]);
+    if(!tomlfile.good())
     {
-        const std::string name = (*iter)->name();
-        const typename traits::real_type m = mass[name];
+        std::cerr << "file open error: " << argv[1] << std::endl;
+        return 1;
+    }
 
-        const auto pos = (*iter)->position();
-        const auto vel = rng.maxwell_boltzmann(m, T, kB);
-        const auto acc = traits::coordinate_type(0., 0., 0.);
+    const auto input = toml::parse(tomlfile);
+    const auto& general = toml::get<toml::Table>(input.at("general"));
+    const std::string file_name =
+        toml::get<toml::String>(general.at("output_path")) +
+        toml::get<toml::String>(general.at("file_name"));
+    const std::int64_t seed =
+        toml::get<toml::Integer>(general.at("seed"));
+    const std::string parameter_path =
+        toml::get<toml::String>(general.at("parameter_path"));
 
-        std::cout << std::scientific;
-        std::cout << "{mass = " << m << ", position = ["
-                  << pos[0] << ", " << pos[1] << ", " << pos[2]
-                  << "], velocity = ["
-                  << vel[0] << ", " << vel[1] << ", " << vel[2]
-                  << "]},"
+    std::ifstream parameter_file(parameter_path + std::string("parameter.toml"));
+    if(!parameter_file.good())
+    {
+        std::cerr << "file open error: " << parameter_path << "parameter.toml"
                   << std::endl;
-
-        const typename traits::real_type f = 0.005 * 168.7 / m;
-        fric_consts.push_back(f);
+        return 1;
     }
-    std::cout << "]" << std::endl;
-    std::cout << "# }}}" << std::endl;
+    const auto params = toml::parse(parameter_file);
 
-    std::cout << "# friction {{{" << std::endl;
-    std::cout << "friction_constant = [" << std::endl;
-    for(auto iter = fric_consts.cbegin(); iter != fric_consts.cend(); ++iter)
-        std::cout << *iter << ", " << std::endl;
-    std::cout << "]" << std::endl;
-    std::cout << "# }}}" << std::endl;
+    // generate coarse-grained structures
+    const auto& structures = toml::get<toml::Table>(input.at("structures"));
 
-    clementigo.output_bond(std::cout);
-    clementigo.output_go(std::cout);
-    clementigo.output_angle(std::cout);
-    clementigo.output_dihedral(std::cout);
-
-    // exvs
-    std::cout << "[[globalforcefield]]" << std::endl;
-    std::cout << "interaction = \"Global\"" << std::endl;
-    std::cout << "potential = \"ExcludedVolume\"" << std::endl;
-    std::cout << "epsilon = 0.6" << std::endl;
-    std::cout << "# params{{{" << std::endl;
-    std::cout << "parameters = [" << std::endl;
-    for(std::size_t i=0; i<clementigo.beads().size(); ++i)
+    std::vector<jarngreipr::PDBChain<traits>> aa_chains;
+    std::vector<jarngreipr::CGChain<traits>>  cg_chains;
+    for(auto& item : structures)
     {
-        std::cout << "{sigma = 2.0}," << std::endl;
+        const auto& ref_model = toml::get<toml::Table>(item.second);
+        const auto& reference = toml::get<toml::String>(ref_model.at("reference"));
+        const auto& model     = toml::get<toml::String>(ref_model.at("model"));
+        for(auto chain : jarngreipr::unpack_chainID(item.first))
+        {// chain == "A", "B", ..."Z", "AA", "AB", ...
+            aa_chains.emplace_back(jarngreipr::read_pdb_chain<traits>(reference, chain));
+            cg_chains.emplace_back(jarngreipr::apply_model<traits>(model, aa_chains.back()));
+        }
     }
-    std::cout << "]" << std::endl;
-    std::cout << "# }}}" << std::endl;
+    {// update index
+        std::size_t bead_idx    = 0;
+        for(auto& cg_chain : cg_chains)
+        {
+            for(auto& cg_bead : cg_chain)
+            {
+                for(auto& atom : cg_bead->atoms())
+                {
+                    atom.residue_id = bead_idx; // XXX
+                }
+                cg_bead->bead_id() = bead_idx;
+                ++bead_idx;
+            }
+        }
+    }
+    {// output coarse-grained structure to .cgs file
+        const std::string cgsfile(file_name + ".cgs");
+        std::ofstream ofs(cgsfile);
+        if(!ofs.good())
+        {
+            std::cerr << "cannot write Coarse-Grained Structure file: "
+                      << cgsfile << std::endl;
+            return 1;
+        }
+        for(auto& cg_chain : cg_chains)
+        {
+            for(auto& cg_bead : cg_chain)
+            {
+                cg_bead->print(ofs);
+                ofs << std::endl;
+            }
+        }
+    }
 
-    clementigo.output_exception(std::cout);
+    // generate forcefield parameters
+    const auto forcefields =
+        toml::get<toml::Array<toml::Table>>(input.at("forcefields"));
 
+//     std::vector<jarngreipr::ForceFieldParameterTable<traits>>
+//         ffpts(forcefields.size());
+//
+//     for(auto iter = forcefields.cbegin(); iter != forcefields.cend(); ++iter)
+//     {
+//         std::size_t index;
+//         try
+//         {
+//             index = toml::get<toml::Integer>(iter->at("index"));
+//             if(ffpts.size() <= index)
+//             {
+//                 std::cerr << "[Error] forcefields.index exceeds number of table"
+//                           << std::endl;
+//                 return 1;
+//             }
+//         }
+//         catch(std::out_of_range&)
+//         {
+//             index = 0;
+//             std::cerr << "[WARNING] no 'index' field in [[forcefields]] table."
+//                       << "set 0." << std::endl;
+//         }
+//
+//         const auto local = toml::get<toml::Table>(iter->at("local"));
+//         for(auto chains = local.cbegin(); chains != local.cend(); ++chains)
+//         {
+//             for(auto chainID : jarngreipr::unpack_chainID(chain.first))
+//             {
+//                 const auto chain = std::find_if(
+//                         cg_chains.cbegin(), cg_chains.cend(), []()
+//                         );
+//                 apply_forcefield();
+//             }
+//         }
+//
+//
+//
+//
+//         const auto global = toml::get<toml::Table>(iter->at("global"));
+//
+//     }
+//
+//     // simulator setup
+//     const auto simulators =
+//         toml::get<toml::Array<toml::Table>>(input.at("simulators"));
+//
+//     for(auto iter = simulators.cbegin(); iter != simulators.cend(); ++iter)
+//     {
+//         try
+//         {
+//         const std::size_t index = toml::get<toml::Integer>(iter->at("index"));
+//         if(ffpts.size() >= index)
+//             ffpts.resize(index+1);
+//         }
+//         catch(std::out_of_range&)
+//         {
+//         std::cerr << "[WARNING] no 'index' field in [[simulators]] table"
+//                   << std::endl;
+//         }
+//     }
     return 0;
 }
